@@ -1,0 +1,568 @@
+{
+  "version": 1,
+  "targets": {
+    "agents": "~/.agents/skills",
+    "claude": "~/.claude/skills",
+    "codex": "~/.codex/skills",
+    "fleet-agents": "~/Desktop/fleet/.agents/skills",
+    "fleet-claude": "~/Desktop/fleet/.claude/skills",
+    "devin": {
+      "dir": "~/.config/devin/skills",
+      "partial": true
+    }
+  },
+  "ignore": {
+    "claude": [
+      "synced"
+    ],
+    "codex": []
+  },
+  "rules": [
+    {
+      "source": "rules/codex-AGENTS.md",
+      "target": "~/.codex/AGENTS.md"
+    },
+    {
+      "source": "rules/claude-CLAUDE.md",
+      "target": "~/.claude/CLAUDE.md"
+    }
+  ],
+  "skills": [
+    {
+      "name": "cloudflare",
+      "type": "git-pinned",
+      "url": "https://github.com/cloudflare/skills.git",
+      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "path": "skills/cloudflare",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "durable-objects",
+      "type": "git-pinned",
+      "url": "https://github.com/cloudflare/skills.git",
+      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "path": "skills/durable-objects",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "web-perf",
+      "type": "git-pinned",
+      "url": "https://github.com/cloudflare/skills.git",
+      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "path": "skills/web-perf",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "workers-best-practices",
+      "type": "git-pinned",
+      "url": "https://github.com/cloudflare/skills.git",
+      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "path": "skills/workers-best-practices",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "wrangler",
+      "type": "git-pinned",
+      "url": "https://github.com/cloudflare/skills.git",
+      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "path": "skills/wrangler",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "brag",
+      "type": "git-pinned",
+      "url": "https://github.com/latent-spaces/brag.git",
+      "commit": "fd7de7e418334876b3ea4e9258231a66a2c2a38d",
+      "path": "skills/brag",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "brag-slim",
+      "type": "git-pinned",
+      "url": "https://github.com/latent-spaces/brag.git",
+      "commit": "fd7de7e418334876b3ea4e9258231a66a2c2a38d",
+      "path": "skills/brag-slim",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "better-typography",
+      "type": "git-pinned",
+      "url": "https://github.com/jakubkrehel/skills.git",
+      "commit": "267330e1adfc66a718fb65fa6918c1f06d0a689e",
+      "path": "skills/better-typography",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "better-ui",
+      "type": "git-pinned",
+      "url": "https://github.com/jakubkrehel/skills.git",
+      "commit": "267330e1adfc66a718fb65fa6918c1f06d0a689e",
+      "path": "skills/better-ui",
+      "targets": [
+        "agents",
+        "claude"
+      ]
+    },
+    {
+      "name": "humanizer",
+      "type": "git-pinned",
+      "url": "https://github.com/blader/humanizer.git",
+      "commit": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+      "path": ".",
+      "targets": [
+        "agents",
+        "claude"
+      ],
+      "overrides": {
+        "disable-model-invocation": true
+      }
+    },
+    {
+      "name": "sentry-cli",
+      "type": "git-pinned",
+      "url": "https://github.com/getsentry/cli.git",
+      "commit": "2e9547d399973527116bd14fdbbff9555866e574",
+      "path": "plugins/sentry-cli/skills/sentry-cli",
+      "targets": [
+        "agents",
+        "claude"
+      ],
+      "note": "Upstream later moved this to packages/cli/plugins/sentry-cli/skills/sentry-cli; bump reports the path change."
+    },
+    {
+      "name": "xcodebuildmcp",
+      "type": "git-pinned",
+      "url": "https://github.com/getsentry/XcodeBuildMCP.git",
+      "commit": "4f9a3102b919b454c30ee5f0071d24f1b50246fc",
+      "path": "skills/xcodebuildmcp",
+      "targets": [
+        "codex"
+      ],
+      "note": "Upstream renamed the project to MobileBuildMCP (skills/mobilebuildmcp); this pin keeps the xcodebuildmcp skill."
+    },
+    {
+      "name": "app-store-review",
+      "type": "git-pinned",
+      "url": "https://github.com/dpearson2699/swift-ios-skills.git",
+      "commit": "45c9085cec536cdf3558d19cf7652ee05f2169b1",
+      "path": "skills/app-store-review",
+      "targets": [
+        "codex"
+      ]
+    },
+    {
+      "name": "impeccable",
+      "type": "git-pinned",
+      "url": "https://github.com/pbakaus/impeccable.git",
+      "commit": "fc2e694afca1ac0cc384b4fe56bab3335fea7912",
+      "ref": "main",
+      "path": ".agents/skills/impeccable",
+      "patch": "patches/impeccable.patch",
+      "targets": [
+        "claude",
+        "fleet-agents",
+        "fleet-claude"
+      ],
+      "note": "Tag skill-v4.0.2 (npm impeccable@3.3.1 installs this skill version per saas-maker tooling/config/design-workflow.json). Patch keeps the owner edits: installer frontmatter, disable-model-invocation, Codex critique gate, Persuade comprehension checks."
+    },
+    {
+      "name": "graphify",
+      "type": "git-pinned",
+      "url": "https://github.com/Graphify-Labs/graphify.git",
+      "commit": "f87011b38e31251a818d28c228979081bad1d33e",
+      "ref": "v8",
+      "path": "graphify/skills/claude",
+      "include": {
+        "SKILL.md": "graphify/skill.md",
+        "references": "graphify/skills/claude/references"
+      },
+      "overrides": {
+        "description": "Build or query a Graphify knowledge graph when explicitly requested. Use for graph extraction, graph queries, paths, or updates; ordinary codebase questions do not require graph construction.",
+        "disable-model-invocation": true
+      },
+      "patch": "patches/graphify.patch",
+      "targets": [
+        "claude"
+      ],
+      "note": "Tag v0.8.47, the layout 'graphify install' (PyPI graphifyy) writes for Claude. Manual-only per ~/.claude/CLAUDE.md."
+    },
+    {
+      "name": "analyze-storage",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/analyze-storage",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "astra-orchestrator",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/astra-orchestrator",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "call-teammate",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/call-teammate",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "clarity-fleet-health",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/clarity-fleet-health",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "code-cleanup",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/code-cleanup",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "design-workflow",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/design-workflow",
+      "targets": [
+        "agents",
+        "claude",
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "fleet-deploy-parity",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/fleet-deploy-parity",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "fleet-ops",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/fleet-ops",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "flow-veo-browser",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/flow-veo-browser",
+      "targets": [
+        "codex",
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "jules-cloud-worker",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/jules-cloud-worker",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "local-ports-cleanup",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/local-ports-cleanup",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "marketing",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/marketing",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "media-acquisition",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/media-acquisition",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "mobile-task-control",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/mobile-task-control",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "name-domains",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/name-domains",
+      "targets": [
+        "claude",
+        "fleet-agents",
+        "fleet-claude"
+      ]
+    },
+    {
+      "name": "ping",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/ping",
+      "targets": [
+        "fleet-agents",
+        "fleet-claude"
+      ]
+    },
+    {
+      "name": "seo-research",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/seo-research",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "site-health",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/site-health",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "skills-validate",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/skills-validate",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "spec-driven",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/spec-driven",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "test-quality",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/test-quality",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "web-extraction",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/web-extraction",
+      "targets": [
+        "fleet-agents"
+      ]
+    },
+    {
+      "name": "codevetter-evaluate",
+      "type": "git-track",
+      "url": "https://github.com/Codevetter/codevetter.git",
+      "branch": "main",
+      "path": "skills/codevetter-evaluate",
+      "targets": [
+        "codex"
+      ]
+    },
+    {
+      "name": "codevetter-performance",
+      "type": "git-track",
+      "url": "https://github.com/Codevetter/codevetter.git",
+      "branch": "main",
+      "path": "skills/codevetter-performance",
+      "targets": [
+        "codex"
+      ]
+    },
+    {
+      "name": "codevetter-review",
+      "type": "git-track",
+      "url": "https://github.com/Codevetter/codevetter.git",
+      "branch": "main",
+      "path": "skills/codevetter-review",
+      "targets": [
+        "codex"
+      ]
+    },
+    {
+      "name": "codevetter-testing",
+      "type": "git-track",
+      "url": "https://github.com/Codevetter/codevetter.git",
+      "branch": "main",
+      "path": "skills/codevetter-testing",
+      "targets": [
+        "codex"
+      ]
+    },
+    {
+      "name": "spacefast",
+      "type": "local",
+      "path": "skills/spacefast",
+      "targets": [
+        "agents",
+        "codex"
+      ],
+      "note": "Installed 2026-09-22 by the spacefast npm CLI (0.5.x, built from the private spacefast/monorepo) with an owner-edited description. The public spacefast/plugins repo ships a different, MCP-tool-based skill; this HTTP-API version matches no commit there."
+    },
+    {
+      "name": "spacefast-account",
+      "type": "local",
+      "path": "skills/spacefast-account",
+      "targets": [
+        "agents",
+        "codex",
+        "devin"
+      ],
+      "note": "Machine-specific account notes; private."
+    },
+    {
+      "name": "vaultwealth",
+      "type": "local",
+      "path": "skills/vaultwealth",
+      "targets": [
+        "agents",
+        "claude"
+      ],
+      "note": "Router for the owner's work org; private."
+    },
+    {
+      "name": "cardboard",
+      "type": "app-bundled",
+      "app": "/Applications/Cardboard.app",
+      "appVersion": "1.2.0",
+      "path": "/Applications/Cardboard.app/Contents/Resources/cli",
+      "include": {
+        "SKILL.md": "skills/cardboard/SKILL.md",
+        "commands": "commands",
+        "techniques": "techniques"
+      },
+      "overrides": {
+        "description": "Edit Cardboard video projects (.cardboard bundles) with the `cb` CLI and timeline.tsx: cut, arrange, caption, add titles and motion graphics, generate footage, narration, music or sound effects, import video links, and check the result with cb look. Use when a task mentions Cardboard or `cb`, or a .cardboard folder or timeline.tsx is in view.",
+        "disable-model-invocation": true
+      },
+      "targets": [
+        "agents",
+        "claude",
+        "codex"
+      ],
+      "note": "Exception: ships only inside Cardboard.app (no public repo). Rebuilt from the app on every sync."
+    },
+    {
+      "name": "coast-cli-skill",
+      "type": "app-bundled",
+      "app": "/Applications/Coast Local.app",
+      "appVersion": "1.0",
+      "path": "/Applications/Coast Local.app/Contents/Resources/skill/coast-cli-skill",
+      "targets": [
+        "codex"
+      ],
+      "note": "Exception: ships only inside Coast Local.app."
+    },
+    {
+      "name": "terminal-browser",
+      "id": "terminal-browser-claude",
+      "type": "app-bundled",
+      "versionFile": "~/.local/share/terminal-browser/app/VERSION",
+      "appVersion": "v0.6.0",
+      "path": "~/.local/share/terminal-browser/app/skills/default/terminal-browser",
+      "targets": [
+        "claude"
+      ],
+      "note": "Exception: installed and updated by the terminal-browser app."
+    },
+    {
+      "name": "terminal-browser",
+      "id": "terminal-browser-codex",
+      "type": "app-bundled",
+      "versionFile": "~/.local/share/terminal-browser/app/VERSION",
+      "appVersion": "v0.6.0",
+      "path": "~/.local/share/terminal-browser/app/skills/codex/terminal-browser",
+      "targets": [
+        "codex"
+      ],
+      "note": "Exception: installed and updated by the terminal-browser app."
+    }
+  ]
+}

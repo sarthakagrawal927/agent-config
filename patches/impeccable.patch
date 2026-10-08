@@ -1,0 +1,107 @@
+diff -ruN a/SKILL.md b/SKILL.md
+--- a/SKILL.md	2026-10-08 23:44:50
++++ b/SKILL.md	2026-10-08 23:44:50
+@@ -2,6 +2,14 @@
+ name: impeccable
+ description: Use when the user wants to design, redesign, shape, critique, audit, polish, clarify, distill, harden, optimize, adapt, animate, colorize, extract, or otherwise improve a frontend interface. Covers websites, landing pages, dashboards, product UI, app shells, components, forms, settings, onboarding, and empty states. Handles UX review, visual hierarchy, information architecture, cognitive load, accessibility, performance, responsive behavior, theming, anti-patterns, typography, fonts, spacing, layout, alignment, color, motion, micro-interactions, UX copy, error states, edge cases, i18n, and reusable design systems or tokens. Also use for bland designs that need to become bolder or more delightful, loud designs that should become quieter, live browser iteration on UI elements, or ambitious visual effects that should feel technically extraordinary. Not for backend-only or non-UI tasks.
+ version: 4.0.2
++user-invocable: true
++argument-hint: '[shape · audit|critique · animate|bolder|colorize|delight|layout|overdrive|quieter|typeset · adapt|clarify|distill · harden|onboard|optimize|polish · init|document|extract|live] [target]'
++license: Apache 2.0
++allowed-tools:
++- Bash(npx impeccable *)
++- Bash(node .agents/skills/impeccable/scripts/*)
++- Bash(node .claude/skills/impeccable/scripts/*)
++disable-model-invocation: true
+ ---
+ 
+ This skill gives you the tools and permission to create design that earns to be called out-of-distribution craft: Whereas before, your design work would have been safe, timid and measured, you now approach every design task as a award-winning design director with impeccable understanding for what makes exceptional design work: production-grade code, peak creativity, a clear POV, deep understanding of the needs of the client and users, and exceptional craft.
+diff -ruN a/agents/openai.yaml b/agents/openai.yaml
+--- a/agents/openai.yaml	2026-10-08 23:44:50
++++ b/agents/openai.yaml	2026-10-08 23:44:50
+@@ -1,4 +1,7 @@
+ interface:
+   display_name: Impeccable
+   short_description: Use when the user wants to design, redesign, shape, critique, audit, polish, clarify,...
+-  default_prompt: Use Impeccable to redesign, critique, audit, or polish this frontend.
+\ No newline at end of file
++  default_prompt: Use Impeccable to redesign, critique, audit, or polish this frontend.
++
++policy:
++  allow_implicit_invocation: false
+diff -ruN a/reference/critique.md b/reference/critique.md
+--- a/reference/critique.md	2026-10-08 23:44:50
++++ b/reference/critique.md	2026-10-08 23:44:50
+@@ -36,11 +36,11 @@
+ - If and only if sub-agents are unavailable, fall back sequentially: finish and record Assessment A, then run Assessment B, then synthesize, and emit the degraded banner.
+ - Whichever path you take, declare it in the report header (see Report header provenance). Skipping sub-agents without the banner is the most common failure of this command.
+ 
+-Codex sub-agent gate (overrides the default above; Codex's permission model requires asking before spawning):
+-- Asking is the normal path, not a degradation. Approving and spawning is the dual-agent path; do not emit the degraded banner just for asking.
+-- If `spawn_agent` is exposed and the user explicitly allowed sub-agents, delegation, or parallel agent work, spawn A and B immediately.
+-- If `spawn_agent` is exposed but the user did not explicitly allow sub-agents, ask exactly once: "Impeccable critique is designed to run two independent sub-agents for an unanchored assessment. May I use sub-agents for this critique?" Then stop until the user answers.
+-- If allowed, spawn A and B. If declined, run sequentially and lead the report with `⚠️ DEGRADED: single-context (sub-agents declined by user)`.
++Codex sub-agent gate (overrides the default above):
++- An explicit `$impeccable critique` invocation, or an active parent skill whose completion contract requires this critique, authorizes the two bounded, read-only assessment sub-agents. Spawn A and B without asking for a second approval.
++- This authorization covers only the isolated review work defined below. It does not authorize implementation, external spending, writes, messages, deployment, or any other delegated action.
++- If the user explicitly declines sub-agents or delegation, run sequentially and lead the report with `⚠️ DEGRADED: single-context (sub-agents declined by user)`.
++- If `spawn_agent` is exposed and the critique is not user-invoked or required by an active parent skill, ask exactly once: "Impeccable critique is designed to run two independent sub-agents for an unanchored assessment. May I use sub-agents for this critique?" Then stop until the user answers.
+ - If `spawn_agent` is not exposed, do not ask; run sequentially and lead with `⚠️ DEGRADED: single-context (spawn_agent unavailable in this session)`.
+ - If spawning fails after permission, run sequentially and lead with `⚠️ DEGRADED: single-context (sub-agent spawn failed: <exact error>)`.
+ Prefer `fork_context: false` with self-contained prompts containing cwd, target, live URL, references, product context, and output contract. If using `fork_context: true`, omit `agent_type`, `model`, and `reasoning_effort`.
+diff -ruN a/reference/new-work.md b/reference/new-work.md
+--- a/reference/new-work.md	2026-10-08 23:44:50
++++ b/reference/new-work.md	2026-10-08 23:44:50
+@@ -24,6 +24,12 @@
+ 
+ Across modes, ask what success looks like, what must remain untouched, and what would make a polished result feel wrong. Do not ask for CSS values or canned aesthetic lanes.
+ 
++For `Persuade`, resolve the proposition before the visual direction: write one
++sentence naming the product, specific audience, job/outcome, and distinctive
++mechanism. List the proof that can earn the claim. Do not proceed with a
++landing-page composition if the product can only be described with a category
++label, mood, or generic benefit.
++
+ ## 3. Choose the right amount of invention
+ 
+ ### Extend an existing surface
+@@ -52,7 +58,16 @@
+ 
+ Every direction the roll can land on must already be viable: every relationship and claim it visualizes true, a real palette and component family, a distinctive composition with one product-specific experience, workable at full-surface scale within the available assets, tools, and performance budget. A candidate that fails on truth is replaced before the roll, never rescued by it. Truth binds claims, not demonstrations: in greenfield work, author whatever illustrative material the concept needs at full fidelity, label it synthetic wherever a visitor could mistake it for the real thing, and hand the user the list of what to replace with real material. What stays uninventable are commercial and factual claims: prices, customers, benchmarks, endpoints, capabilities the product does not have. Refusing a bold direction because its demonstration data does not exist yet is the timidity reflex wearing honesty's clothes.
+ 
+-For **Persuade**, the opening must make the offer intelligible and desirable, expose a clear action, and demonstrate something only this product can prove. Conversion lives inside the form's own vocabulary: a hook that lands in one line, a visible primary action, a legible reading order. A committed form that hides the offer or the action has not finished translating. For **Operate**, expression may never obscure the task, state, or familiar affordance. For **Read**, comprehension and wayfinding remain intact. For **Experience**, the work itself leads from the first viewport.
++For **Persuade**, the opening must make the offer intelligible and desirable,
++expose a clear action, and demonstrate something only this product can prove.
++Within the first viewport, a fresh visitor should be able to answer: “What is
++this?”, “Is it for me?”, “Why should I care?”, and “What can I do next?”
++Conversion lives inside the form's own vocabulary: a hook that lands in one
++line, a visible primary action, a legible reading order. A committed form that
++hides the offer or the action has not finished translating. For **Operate**,
++expression may never obscure the task, state, or familiar affordance. For
++**Read**, comprehension and wayfinding remain intact. For **Experience**, the
++work itself leads from the first viewport.
+ 
+ ## 4. Commit the world
+ 
+@@ -98,6 +113,6 @@
+ 
+ ## 7. Inspect and finish
+ 
+-Inspect desktop and mobile, critique the render against the user's request, the direction contract, and DESIGN.md, fix material gaps, and re-inspect. On a Persuade surface, verify the mode did its job: a first-time visitor should know what this is, why it matters, and what to do within seconds, in the form's own vocabulary. After a first implementation of a new world, update DESIGN.md with the exact tokens and behaviors that survived the build.
++Inspect desktop and mobile, critique the render against the user's request, the direction contract, and DESIGN.md, fix material gaps, and re-inspect. On a Persuade surface, verify the mode did its job with a fresh-visitor comprehension test: a first-time visitor should know what this is, who it is for, why it matters, what proves the promise, and what to do within seconds, in the form's own vocabulary. Record the reviewer's answers and fix any misunderstanding before calling the surface finished. After a first implementation of a new world, update DESIGN.md with the exact tokens and behaviors that survived the build.
+ 
+ Spawn the shipped finish reviewer, `impeccable-finish-reviewer` (`impeccable_finish_reviewer` in codex), and give it the original request, confirmed answers, the artifact path, its direction contract, DESIGN.md, existing hook findings, and the QUALITY BAR card and approved comp paths. This review never runs inside the build thread. Only a harness whose tool surface has no subagent capability at all substitutes a fresh in-thread pass after stepping fully out of the build context, and a substituted review is disclosed in one line at finish, never silently. The reviewer's first check is persistence: on a new or replacement world, PRODUCT.md and DESIGN.md exist and DESIGN.md matches the built world; a missing file fails the review before any craft point is scored. Its second check is the ceiling: against the chosen world's QUALITY BAR card and the approved comp, name the native devices the build left unused, frame, depth, lettering, ornament density; floor rigor is very good at disguising an unreached card. Then ask for a short list of material fixes, promise by promise against the contract, apply them, and finish. Do not run a second detector.
+diff -ruN a/reference/polish.md b/reference/polish.md
+--- a/reference/polish.md	2026-10-08 23:44:50
++++ b/reference/polish.md	2026-10-08 23:44:50
+@@ -53,6 +53,10 @@
+ - Match neighboring mental models, terminology, disclosure, routing, save behavior, and optimistic or pessimistic patterns.
+ - Make the primary task and current state obvious without flattening every element to equal weight.
+ - Ensure arrival, transition, empty, and recovery paths connect instead of behaving as isolated screens.
++- On landing/Persuade surfaces, perform a fresh-visitor comprehension check:
++  record whether a reviewer can accurately explain what the product is, who it
++  serves, why it matters, what proves the promise, and the next action from the
++  opening view. Fix unclear proposition or proof before visual refinements.
+ 
+ ### Layout and type
+ 

@@ -1,0 +1,560 @@
+#!/usr/bin/env node
+// agent-config: materialize agent skills and global rules from git sources.
+// No dependencies beyond node, git, tar, patch, diff and /usr/bin/trash.
+// See README.md for the model. Never deletes: removals go to /usr/bin/trash,
+// replaced targets are moved into ~/.agent-config-backups/<date>/agent-config/.
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
+const { spawnSync } = require('child_process');
+
+const HOME = os.homedir();
+const REPO = path.resolve(__dirname, '..');
+const LOCK = path.join(REPO, 'skills.lock.json');
+const DATA = path.join(HOME, '.local/share/agent-config');
+const SRC = path.join(DATA, 'src');
+const OUT = path.join(DATA, 'skills');
+const STATE = path.join(DATA, 'state.json');
+// Runtime caches some skills create inside their own folder are not content.
+const IGNORE_NAMES = new Set(['.DS_Store', '__pycache__', '.git', '.venv', 'node_modules']);
+const TRASH = '/usr/bin/trash';
+
+// ---------- small helpers ----------
+const expand = (p) => (p.startsWith('~/') ? path.join(HOME, p.slice(2)) : p);
+const short = (p) => (p.startsWith(HOME + '/') ? '~/' + p.slice(HOME.length + 1) : p);
+const today = () => new Date().toISOString().slice(0, 10);
+let FLAGS = {};
+const warnings = [];
+function warn(msg) { warnings.push(msg); console.error('warn: ' + msg); }
+function log(msg) { if (!FLAGS.quiet) console.log(msg); }
+
+function run(cmd, args, opts = {}) {
+  const r = spawnSync(cmd, args, {
+    encoding: opts.encoding === undefined ? 'utf8' : opts.encoding,
+    input: opts.input,
+    cwd: opts.cwd,
+    maxBuffer: 1024 * 1024 * 1024,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  });
+  if (r.error) throw r.error;
+  if (r.status !== 0 && !opts.allowFail) {
+    const err = (r.stderr || '').toString().trim();
+    throw new Error(`${cmd} ${args.join(' ')} failed (${r.status}): ${err}`);
+  }
+  return opts.full ? r : r.stdout;
+}
+const git = (dir, args, opts) => run('git', ['-C', dir, ...args], opts);
+const gitOk = (dir, args) => run('git', ['-C', dir, ...args], { allowFail: true, full: true }).status === 0;
+
+function lstat(p) { try { return fs.lstatSync(p); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } }
+function readJSON(p, fallback) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return fallback; } }
+function writeJSON(p, v) { fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n'); }
+function trash(p) { if (lstat(p)) run(TRASH, [p]); }
+function isDesktop(p) { return p === path.join(HOME, 'Desktop') || p.startsWith(path.join(HOME, 'Desktop') + '/'); }
+
+function loadLock() {
+  const lock = readJSON(LOCK, null);
+  if (!lock) throw new Error(`cannot read ${LOCK}`);
+  for (const s of lock.skills) s.id = s.id || s.name;
+  return lock;
+}
+function saveLock(lock) {
+  const copy = JSON.parse(JSON.stringify(lock));
+  for (const s of copy.skills) if (s.id === s.name) delete s.id;
+  writeJSON(LOCK, copy);
+}
+
+// Content hash of a directory tree (follows the top-level path, not inner links).
+function hashTree(p) {
+  const h = crypto.createHash('sha256');
+  const st = fs.statSync(p);
+  if (!st.isDirectory()) { h.update(fs.readFileSync(p)); return h.digest('hex'); }
+  const walk = (dir, rel) => {
+    for (const name of fs.readdirSync(dir).sort()) {
+      if (IGNORE_NAMES.has(name)) continue;
+      const full = path.join(dir, name);
+      const r = rel ? rel + '/' + name : name;
+      const s = fs.lstatSync(full);
+      if (s.isSymbolicLink()) h.update(`L ${r} ${fs.readlinkSync(full)}\n`);
+      else if (s.isDirectory()) { h.update(`D ${r}\n`); walk(full, r); }
+      else { h.update(`F ${r} ${crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex')}\n`); }
+    }
+  };
+  walk(p, '');
+  return h.digest('hex');
+}
+
+// Move an existing path into the dated backup tree (never deletes).
+function backup(p) {
+  const rel = p.startsWith(HOME + '/') ? p.slice(HOME.length + 1) : p.replace(/^\//, '');
+  let dest = path.join(HOME, '.agent-config-backups', today(), 'agent-config', rel);
+  if (lstat(dest)) dest += '.' + Date.now();
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.renameSync(p, dest);
+  return dest;
+}
+
+function symlinkAtomic(target, linkPath) {
+  const tmp = `${linkPath}.agent-config-tmp-${process.pid}`;
+  if (lstat(tmp)) trash(tmp);
+  fs.symlinkSync(target, tmp);
+  fs.renameSync(tmp, linkPath);
+}
+
+// ---------- sources ----------
+function repoDirFor(url) {
+  const m = url.match(/github\.com[:/]([^/]+)\/([^/]+?)(\.git)?\/?$/);
+  if (!m) throw new Error(`unsupported git url ${url}`);
+  return path.join(SRC, `${m[1]}__${m[2]}`);
+}
+
+function ensurePinnedRepo(entry) {
+  const dir = repoDirFor(entry.url);
+  if (!lstat(dir)) {
+    fs.mkdirSync(SRC, { recursive: true });
+    log(`clone ${entry.url}`);
+    run('git', ['clone', '-q', '--filter=blob:none', '--no-checkout', entry.url, dir]);
+  }
+  if (!gitOk(dir, ['cat-file', '-e', `${entry.commit}^{commit}`])) {
+    if (!gitOk(dir, ['fetch', '-q', '--filter=blob:none', 'origin', entry.commit])) git(dir, ['fetch', '-q', '--filter=blob:none', 'origin']);
+  }
+  return dir;
+}
+
+let fetchedTrack = new Set();
+function ensureTrackRepo(entry, { fetch = true } = {}) {
+  const dir = repoDirFor(entry.url);
+  const branch = entry.branch || 'main';
+  if (!lstat(dir)) {
+    fs.mkdirSync(SRC, { recursive: true });
+    log(`clone ${entry.url} (${branch}, shallow)`);
+    run('git', ['clone', '-q', '--depth', '1', '--branch', branch, '--single-branch', entry.url, dir]);
+    git(dir, ['checkout', '-q', '--detach', `origin/${branch}`]);
+    fetchedTrack.add(dir);
+    return dir;
+  }
+  if (fetch && !fetchedTrack.has(dir)) {
+    fetchedTrack.add(dir);
+    const r = run('git', ['-C', dir, 'fetch', '-q', '--depth', '1', 'origin', `+refs/heads/${branch}:refs/remotes/origin/${branch}`], { allowFail: true, full: true });
+    if (r.status !== 0) { warn(`fetch failed for ${short(dir)}: ${(r.stderr || '').trim()}`); return dir; }
+    const dirty = git(dir, ['status', '--porcelain', '--untracked-files=no']).trim();
+    if (dirty) { warn(`${short(dir)} has local edits; not moving it to origin/${branch}`); return dir; }
+    const head = git(dir, ['rev-parse', 'HEAD']).trim();
+    const want = git(dir, ['rev-parse', `origin/${branch}`]).trim();
+    if (head !== want) { git(dir, ['checkout', '-q', '--detach', want]); log(`${short(dir)} -> ${want.slice(0, 12)}`); }
+  }
+  return dir;
+}
+
+// Extract <treeish>:<sub> from a repo into dest (dest must not exist).
+function extractGit(dir, rev, sub, dest) {
+  const treeish = sub && sub !== '.' ? `${rev}:${sub}` : `${rev}^{tree}`;
+  const type = git(dir, ['cat-file', '-t', treeish]).trim();
+  if (type === 'blob') {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, git(dir, ['cat-file', '-p', treeish], { encoding: 'buffer' }));
+    return;
+  }
+  fs.mkdirSync(dest, { recursive: true });
+  const tar = git(dir, ['archive', '--format=tar', treeish], { encoding: 'buffer' });
+  run('tar', ['-x', '-C', dest], { input: tar, encoding: 'buffer' });
+  // git archive honours export-ignore/export-subst; restore exact blobs.
+  const listing = git(dir, ['ls-tree', '-r', '-z', treeish]).split('\0').filter(Boolean);
+  for (const line of listing) {
+    const [meta, rel] = line.split('\t');
+    const [mode, kind, sha] = meta.split(' ');
+    if (kind !== 'blob') continue;
+    const out = path.join(dest, rel);
+    const body = git(dir, ['cat-file', '-p', sha], { encoding: 'buffer' });
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    if (mode === '120000') { if (!lstat(out)) fs.symlinkSync(body.toString(), out); continue; }
+    if (!lstat(out) || !fs.readFileSync(out).equals(body)) fs.writeFileSync(out, body);
+  }
+}
+
+function copyFs(src, dest) {
+  fs.cpSync(src, dest, { recursive: true, verbatimSymlinks: true, filter: (s) => !IGNORE_NAMES.has(path.basename(s)) });
+}
+
+// ---------- frontmatter overrides ----------
+function yamlScalar(v) {
+  if (typeof v === 'boolean' || typeof v === 'number') return String(v);
+  const s = String(v);
+  if (/^[\s"'{}\[\]&*!|>%@`#,?:-]|: | #|\s$|^$/.test(s) || /^(true|false|null|yes|no|~|[\d.]+)$/i.test(s)) return JSON.stringify(s);
+  return s;
+}
+function applyOverrides(file, overrides) {
+  const text = fs.readFileSync(file, 'utf8');
+  const lines = text.split('\n');
+  if (lines[0] !== '---') throw new Error(`${file}: no frontmatter`);
+  let end = lines.indexOf('---', 1);
+  if (end < 0) throw new Error(`${file}: unterminated frontmatter`);
+  const blockOf = (key) => {
+    const i = lines.findIndex((l, idx) => idx > 0 && idx < end && l.startsWith(key + ':'));
+    if (i < 0) return null;
+    let j = i + 1;
+    while (j < end && (/^[ \t]/.test(lines[j]) || (lines[j].startsWith('- ') && lines[i].trim().endsWith(':')))) j++;
+    return [i, j];
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    const b = blockOf(key);
+    if (value === null) { if (b) { lines.splice(b[0], b[1] - b[0]); end = lines.indexOf('---', 1); } continue; }
+    const line = `${key}: ${yamlScalar(value)}`;
+    if (b) lines.splice(b[0], b[1] - b[0], line);
+    else {
+      const d = blockOf('description');
+      lines.splice(d ? d[1] : end, 0, line);
+    }
+    end = lines.indexOf('---', 1);
+  }
+  fs.writeFileSync(file, lines.join('\n'));
+}
+
+// ---------- materialization ----------
+function needsCopy(e) { return Boolean(e.overrides || e.patch || e.include); }
+
+function buildInto(e, staging) {
+  let rev, dir, base;
+  if (e.type === 'git-pinned') { dir = ensurePinnedRepo(e); rev = e.commit; }
+  else if (e.type === 'git-track') { dir = ensureTrackRepo(e); rev = 'HEAD'; }
+  else if (e.type === 'app-bundled') base = expand(e.path);
+  else if (e.type === 'local') base = path.join(REPO, e.path);
+  const put = (from, to) => {
+    if (dir) extractGit(dir, rev, from, to);
+    else {
+      const src = from && from !== '.' ? path.join(base, from) : base;
+      if (!lstat(src)) throw new Error(`missing ${short(src)}`);
+      copyFs(src, to);
+    }
+  };
+  if (e.include) {
+    fs.mkdirSync(staging, { recursive: true });
+    for (const [to, from] of Object.entries(e.include)) put(from, path.join(staging, to));
+  } else put(dir ? e.path : '.', staging);
+  if (e.overrides) applyOverrides(path.join(staging, 'SKILL.md'), e.overrides);
+  if (e.patch) {
+    const r = run('patch', ['-p1', '-s', '--forward', '--batch', '-d', staging, '-i', path.join(REPO, e.patch)], { allowFail: true, full: true });
+    if (r.status !== 0) throw new Error(`patch ${e.patch} did not apply: ${(r.stdout || '') + (r.stderr || '')}`.trim());
+    for (const f of walkFiles(staging)) if (/\.orig$|\.rej$/.test(f)) trash(f);
+  }
+}
+function walkFiles(dir) {
+  const out = [];
+  for (const n of fs.readdirSync(dir)) { const f = path.join(dir, n); const s = fs.lstatSync(f); if (s.isDirectory()) out.push(...walkFiles(f)); else out.push(f); }
+  return out;
+}
+
+// Where the materialized skill should point (for symlink-style entries).
+function linkSource(e) {
+  if (e.type === 'git-track') return path.join(repoDirFor(e.url), e.path);
+  if (e.type === 'local') return path.join(REPO, e.path);
+  if (e.type === 'app-bundled') return expand(e.path);
+  return null;
+}
+
+function materialize(e, state) {
+  const dest = path.join(OUT, e.id);
+  fs.mkdirSync(OUT, { recursive: true });
+  if (e.type === 'git-track') ensureTrackRepo(e);
+  if (e.type === 'app-bundled') {
+    const v = appVersion(e);
+    if (!lstat(expand(e.path))) { warn(`${e.id}: app source ${e.path} missing; keeping current copy`); return dest; }
+    if (v && e.appVersion && v !== e.appVersion) warn(`${e.id}: app version is ${v}, lock records ${e.appVersion} (review, then update the lock)`);
+  }
+  if (!needsCopy(e) && e.type !== 'git-pinned') {
+    const want = linkSource(e);
+    const cur = lstat(dest);
+    if (cur && !cur.isSymbolicLink()) {
+      const prev = state[e.id];
+      if (prev && hashTree(dest) !== prev.hash && !FLAGS.adopt) { warn(`${e.id}: materialized copy has local edits; skipped (use --adopt to back it up)`); return dest; }
+      if (prev && hashTree(dest) !== prev.hash) backup(dest); else trash(dest);
+    }
+    if (!lstat(dest) || fs.readlinkSync(dest) !== want) symlinkAtomic(want, dest);
+    state[e.id] = { kind: 'link', to: want };
+    return dest;
+  }
+  const staging = path.join(DATA, `.staging-${e.id}-${process.pid}`);
+  if (lstat(staging)) trash(staging);
+  try { buildInto(e, staging); } catch (err) { if (lstat(staging)) trash(staging); warn(`${e.id}: build failed: ${err.message}`); return dest; }
+  const newHash = hashTree(staging);
+  const cur = lstat(dest);
+  if (cur && !cur.isSymbolicLink()) {
+    const curHash = hashTree(dest);
+    if (curHash === newHash) { trash(staging); state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null }; return dest; }
+    const prev = state[e.id];
+    if (prev && prev.hash && curHash !== prev.hash) {
+      if (!FLAGS.adopt) { trash(staging); warn(`${e.id}: materialized copy has local edits; skipped (use --adopt to back it up)`); return dest; }
+      log(`${e.id}: local edits backed up to ${short(backup(dest))}`);
+    } else trash(dest);
+  } else if (cur) trash(dest);
+  fs.renameSync(staging, dest);
+  state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null };
+  log(`${e.id}: materialized ${e.commit ? e.commit.slice(0, 12) : e.type}`);
+  return dest;
+}
+
+function appVersion(e) {
+  if (e.versionFile) { try { return fs.readFileSync(expand(e.versionFile), 'utf8').trim(); } catch { return null; } }
+  if (e.app) {
+    const r = run('defaults', ['read', path.join(expand(e.app), 'Contents/Info.plist'), 'CFBundleShortVersionString'], { allowFail: true, full: true });
+    return r.status === 0 ? r.stdout.trim() : null;
+  }
+  return null;
+}
+
+// ---------- linking ----------
+function sameContent(a, b) {
+  try { return hashTree(a) === hashTree(b); } catch { return false; }
+}
+
+// Point linkPath at want. Returns a status word.
+function ensureLink(linkPath, want, label) {
+  const cur = lstat(linkPath);
+  if (cur && cur.isSymbolicLink()) {
+    const to = fs.readlinkSync(linkPath);
+    if (to === want) return 'ok';
+    symlinkAtomic(want, linkPath);
+    log(`relink ${short(linkPath)}: ${to} -> ${short(want)}`);
+    return 'relinked';
+  }
+  if (cur) {
+    const identical = sameContent(linkPath, want);
+    if (!identical && !FLAGS.adopt) { warn(`${short(linkPath)} is a real ${cur.isDirectory() ? 'dir' : 'file'} that differs from ${label}; pass --adopt to back it up and link`); return 'refused'; }
+    const where = backup(linkPath);
+    symlinkAtomic(want, linkPath);
+    log(`adopt ${short(linkPath)} (${identical ? 'identical' : 'DIFFERENT'}; backup ${short(where)})`);
+    return 'adopted';
+  }
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  fs.symlinkSync(want, linkPath);
+  log(`link ${short(linkPath)} -> ${short(want)}`);
+  return 'linked';
+}
+
+function targetDir(lock, t) {
+  const d = lock.targets[t];
+  if (!d) throw new Error(`unknown target ${t}`);
+  return expand(typeof d === 'string' ? d : d.dir);
+}
+
+function skipTarget(dir) { return FLAGS['skip-desktop'] && isDesktop(dir); }
+
+// ---------- commands ----------
+function cmdSync(args) {
+  const lock = loadLock();
+  const state = readJSON(STATE, {});
+  const only = args.filter((a) => !a.startsWith('--'));
+  fs.mkdirSync(DATA, { recursive: true });
+  for (const e of lock.skills) {
+    if (only.length && !only.includes(e.id) && !only.includes(e.name)) continue;
+    const dest = materialize(e, state);
+    if (!lstat(dest)) continue;
+    for (const t of e.targets) {
+      const dir = targetDir(lock, t);
+      if (skipTarget(dir)) continue;
+      try { ensureLink(path.join(dir, e.name), dest, e.id); }
+      catch (err) { warn(`${t}/${e.name}: ${err.code === 'EPERM' ? 'permission denied (macOS privacy?)' : err.message}`); }
+    }
+  }
+  writeJSON(STATE, state);
+  if (!only.length) for (const r of lock.rules || []) {
+    const t = expand(r.target);
+    if (skipTarget(t)) continue;
+    try { ensureLink(t, path.join(REPO, r.source), r.source); } catch (err) { warn(`${r.target}: ${err.message}`); }
+  }
+  console.log(`sync done ${new Date().toISOString()}${warnings.length ? ` with ${warnings.length} warning(s)` : ''}`);
+  return warnings.some((w) => /failed|refused|differs/.test(w)) ? 1 : 0;
+}
+
+function upstreamLabel(e) {
+  if (e.type === 'git-pinned') return `${e.url.replace(/^https:\/\/github.com\//, '').replace(/\.git$/, '')}@${e.commit.slice(0, 12)}:${e.path}`;
+  if (e.type === 'git-track') {
+    const dir = repoDirFor(e.url);
+    let sha = '?';
+    try { sha = git(dir, ['rev-parse', '--short=12', 'HEAD']).trim(); } catch {}
+    return `${e.url.replace(/^https:\/\/github.com\//, '').replace(/\.git$/, '')}#${e.branch || 'main'}@${sha}:${e.path}`;
+  }
+  if (e.type === 'local') return `agent-config:${e.path}`;
+  return `${short(expand(e.path))} (${String(e.appVersion || "?").replace(/^v?/, "v")})`;
+}
+
+function cmdStatus() {
+  const lock = loadLock();
+  const state = readJSON(STATE, {});
+  const rows = [];
+  let problems = 0;
+  const declared = {};
+  for (const e of lock.skills) {
+    const dest = path.join(OUT, e.id);
+    let mat = 'ok';
+    const st = lstat(dest);
+    if (!st) mat = 'MISSING';
+    else if (st.isSymbolicLink()) {
+      const to = fs.readlinkSync(dest);
+      if (!lstat(to)) mat = 'BROKEN';
+      else if (e.type === 'git-track') {
+        const dirty = git(repoDirFor(e.url), ['status', '--porcelain', '--', e.path]).trim();
+        if (dirty) mat = 'LOCAL-EDITS';
+      }
+    } else if (state[e.id] && state[e.id].hash && hashTree(dest) !== state[e.id].hash) mat = 'LOCAL-EDITS';
+    if (e.type === 'app-bundled') { const v = appVersion(e); if (v && e.appVersion && v !== e.appVersion) mat += ` (app now v${v})`; }
+    const tstat = [];
+    for (const t of e.targets) {
+      (declared[t] = declared[t] || new Set()).add(e.name);
+      const dir = targetDir(lock, t);
+      const p = path.join(dir, e.name);
+      let s;
+      try {
+        const l = lstat(p);
+        if (!l) s = 'missing';
+        else if (!l.isSymbolicLink()) s = 'UNLINKED';
+        else s = fs.readlinkSync(p) === dest ? 'ok' : 'WRONG-LINK';
+      } catch (err) { s = err.code === 'EPERM' ? 'no-access' : 'error'; }
+      if (s !== 'ok') problems++;
+      tstat.push(`${t}:${s}`);
+    }
+    if (mat !== 'ok') problems++;
+    rows.push([e.name + (e.id !== e.name ? ` [${e.id}]` : ''), e.type, upstreamLabel(e), mat, tstat.join(' ')]);
+  }
+  const w = [0, 0, 0, 0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
+  console.log('SKILLS');
+  for (const r of rows) console.log('  ' + r.slice(0, 4).map((c, i) => c.padEnd(w[i])).join('  ') + '  ' + r[4]);
+
+  console.log('\nUNMANAGED (in target dirs, not in skills.lock.json)');
+  let unmanaged = 0;
+  for (const [t, spec] of Object.entries(lock.targets)) {
+    if (typeof spec === 'object' && spec.partial) continue;
+    const dir = targetDir(lock, t);
+    const ignore = new Set((lock.ignore && lock.ignore[t]) || []);
+    let names;
+    try { names = fs.readdirSync(dir); } catch (err) { console.log(`  ${t}: cannot read ${short(dir)} (${err.code})`); continue; }
+    for (const n of names.sort()) {
+      if (n.startsWith('.') || ignore.has(n) || (declared[t] && declared[t].has(n))) continue;
+      const p = path.join(dir, n);
+      const l = lstat(p);
+      const desc = l.isSymbolicLink() ? `-> ${fs.readlinkSync(p)}` : 'real dir';
+      console.log(`  ${t}/${n}  ${desc}`);
+      unmanaged++;
+    }
+  }
+  if (!unmanaged) console.log('  none');
+
+  console.log('\nRULES');
+  for (const r of lock.rules || []) {
+    const t = expand(r.target);
+    const l = lstat(t);
+    const want = path.join(REPO, r.source);
+    const s = !l ? 'missing' : !l.isSymbolicLink() ? 'UNLINKED (real file; edits are not in git)' : fs.readlinkSync(t) === want ? 'ok' : 'WRONG-LINK';
+    if (s !== 'ok') problems++;
+    console.log(`  ${r.target} -> ${r.source}: ${s}`);
+  }
+  const dirty = git(REPO, ['status', '--porcelain']).trim();
+  console.log(`\nREPO ${short(REPO)}: ${dirty ? 'UNCOMMITTED CHANGES\n' + dirty.split('\n').map((l) => '  ' + l).join('\n') : 'clean'}`);
+  console.log(`\n${lock.skills.length} skills, ${problems} problem(s), ${unmanaged} unmanaged`);
+  return problems || unmanaged ? 1 : 0;
+}
+
+function remoteDefaultRef(dir, e) {
+  if (e.ref) return e.ref;
+  const out = git(dir, ['ls-remote', '--symref', 'origin', 'HEAD']);
+  const m = out.match(/ref: refs\/heads\/(\S+)\s+HEAD/);
+  return m ? m[1] : 'main';
+}
+
+function cmdBump(args) {
+  const lock = loadLock();
+  const all = args.includes('--all');
+  const names = args.filter((a) => !a.startsWith('--'));
+  if (!all && !names.length) throw new Error('usage: agent-config bump <name...|--all>');
+  const changed = [];
+  for (const e of lock.skills) {
+    if (!all && !names.includes(e.id) && !names.includes(e.name)) continue;
+    if (e.type !== 'git-pinned') { if (!all) console.log(`${e.id}: ${e.type} is not pinned; nothing to bump`); continue; }
+    const dir = ensurePinnedRepo(e);
+    const ref = remoteDefaultRef(dir, e);
+    git(dir, ['fetch', '-q', '--filter=blob:none', 'origin', ref]);
+    const head = git(dir, ['rev-parse', 'FETCH_HEAD']).trim();
+    const paths = e.include ? Object.values(e.include) : [e.path];
+    const missing = paths.filter((p) => p && p !== '.' && !gitOk(dir, ['cat-file', '-e', `${head}:${p}`]));
+    if (missing.length) { console.log(`${e.id}: upstream ${ref}@${head.slice(0, 12)} no longer has ${missing.join(', ')}; left at ${e.commit.slice(0, 12)}`); continue; }
+    const tree = (rev) => paths.map((p) => git(dir, ['rev-parse', p && p !== '.' ? `${rev}:${p}` : `${rev}^{tree}`]).trim()).join(',');
+    if (tree(head) === tree(e.commit)) { console.log(`${e.id}: up to date (${ref}@${head.slice(0, 12)})`); continue; }
+    const scope = paths.map((p) => (p && p !== '.' ? p : '.'));
+    console.log(`\n== ${e.id}: ${e.commit.slice(0, 12)} -> ${head.slice(0, 12)} (${ref})`);
+    console.log(git(dir, ['diff', '--stat', e.commit, head, '--', ...scope]).trimEnd());
+    const skillMd = e.include && e.include['SKILL.md'] ? e.include['SKILL.md'] : (e.path && e.path !== '.' ? `${e.path}/SKILL.md` : 'SKILL.md');
+    const d = git(dir, ['diff', '--unified=0', e.commit, head, '--', skillMd]);
+    const added = d.split('\n').filter((l) => l.startsWith('+') && !l.startsWith('+++'));
+    const removed = d.split('\n').filter((l) => l.startsWith('-') && !l.startsWith('---'));
+    console.log(`SKILL.md: +${added.length} -${removed.length} lines`);
+    for (const l of d.split('\n').filter((l) => /^[+-](name|description|version|disable-model-invocation):/.test(l))) console.log('  ' + l.slice(0, 200));
+    const old = e.commit;
+    e.commit = head;
+    if (e.patch || e.overrides) {
+      const staging = path.join(DATA, `.bumpcheck-${e.id}-${process.pid}`);
+      try { buildInto(e, staging); } catch (err) { console.log(`  ${e.id}: overrides/patch do not apply at new commit (${err.message}); left at ${old.slice(0, 12)}`); e.commit = old; }
+      if (lstat(staging)) trash(staging);
+    }
+    if (e.commit !== old) changed.push(e.id);
+  }
+  if (changed.length) {
+    saveLock(lock);
+    console.log(`\nbumped: ${changed.join(', ')}. Run 'agent-config sync', review, then commit skills.lock.json.`);
+  }
+  return 0;
+}
+
+function cmdAdd(args) {
+  // agent-config add <name> --git <url> --path <subpath> [--ref <branch>] [--track] --targets a,b
+  // agent-config add <name> --local <dir> --targets a,b
+  const name = args[0];
+  const opt = {};
+  for (let i = 1; i < args.length; i++) if (args[i].startsWith('--')) { const k = args[i].slice(2); const v = args[i + 1] && !args[i + 1].startsWith('--') ? args[++i] : true; opt[k] = v; }
+  if (!name || !opt.targets || (!opt.git && !opt.local)) throw new Error('usage: agent-config add <name> (--git <url> --path <subpath> [--ref <branch>] [--track] | --local <dir>) --targets agents,claude,codex');
+  const lock = loadLock();
+  if (lock.skills.some((s) => s.id === name)) throw new Error(`${name} already in lock`);
+  const targets = String(opt.targets).split(',');
+  for (const t of targets) targetDir(lock, t);
+  let entry;
+  if (opt.local) {
+    const dest = path.join(REPO, 'skills', name);
+    if (lstat(dest)) throw new Error(`${short(dest)} exists`);
+    copyFs(path.resolve(expand(opt.local)), dest);
+    entry = { name, type: 'local', path: `skills/${name}`, targets };
+  } else if (opt.track) {
+    entry = { name, type: 'git-track', url: opt.git, branch: opt.ref || 'main', path: opt.path, targets };
+  } else {
+    entry = { name, type: 'git-pinned', url: opt.git, commit: '0'.repeat(40), path: opt.path, targets };
+    const dir = ensurePinnedRepo({ ...entry, commit: 'HEAD' });
+    const ref = remoteDefaultRef(dir, { ref: opt.ref });
+    git(dir, ['fetch', '-q', '--filter=blob:none', 'origin', ref]);
+    entry.commit = git(dir, ['rev-parse', 'FETCH_HEAD']).trim();
+    if (opt.ref) entry.ref = opt.ref;
+    if (!gitOk(dir, ['cat-file', '-e', `${entry.commit}:${opt.path}/SKILL.md`])) throw new Error(`${opt.path}/SKILL.md not found at ${entry.commit.slice(0, 12)}`);
+  }
+  lock.skills.push(entry);
+  saveLock(lock);
+  console.log(`added ${name} (${entry.type}). Run 'agent-config sync ${name}', then commit.`);
+  return 0;
+}
+
+function main() {
+  const [cmd, ...rest] = process.argv.slice(2);
+  for (const a of rest) if (a.startsWith('--')) FLAGS[a.slice(2)] = true;
+  const cmds = { sync: cmdSync, status: cmdStatus, bump: cmdBump, add: cmdAdd };
+  if (!cmds[cmd]) {
+    console.log(`usage: agent-config <command>
+  sync [name...] [--adopt] [--skip-desktop] [--quiet]   fetch sources, materialize skills, link targets and rules
+  status                                                every target with source, SHA and drift; unmanaged skills
+  bump <name...|--all>                                  move git-pinned entries to the latest upstream commit
+  add <name> --git <url> --path <sub> [--ref b] [--track] --targets a,b
+  add <name> --local <dir> --targets a,b`);
+    return cmd ? 2 : 0;
+  }
+  return cmds[cmd](rest);
+}
+
+try { process.exitCode = main(); } catch (err) { console.error('error: ' + err.message); process.exitCode = 2; }
