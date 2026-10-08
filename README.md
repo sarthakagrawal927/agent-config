@@ -48,6 +48,23 @@ Trash. It never deletes.
 The launchd job `com.sarthak.agent-config-sync` runs `sync --skip-desktop` every
 hour. The log is `~/Library/Logs/com.sarthak.agent-config-sync.log`.
 
+## Held pins
+
+- **impeccable stays at skill 4.0.2** (`fc2e694`, tag `skill-v4.0.2`), matching
+  saas-maker `tooling/config/design-workflow.json`. Reviewed 4.5.0 on 2026-10-09
+  and declined it: 4.5 deletes the Node scripts (`scripts/hook.mjs`, the detector,
+  `live-*`) and replaces them with a `scripts/impeccable` launcher that runs a
+  platform binary not in the repo, fetched to a cache at runtime. That breaks the
+  Fleet edit hook (`.claude/settings.local.json` runs
+  `.claude/skills/impeccable/scripts/hook.mjs`) and adds an unreviewed binary
+  download. Its content gains (mode references, component review, degraded
+  fallbacks) do not outweigh that. Revisit if the hook moves to the new launcher.
+  `bump impeccable` will keep reporting that the patch no longer applies.
+- **xcodebuildmcp stays at tag v2.7.0.** Upstream 2.7.1 renamed the project to
+  MobileBuildMCP (skill `mobilebuildmcp`, config dir `.mobilebuildmcp/`). The Codex
+  MCP server is pinned to `xcodebuildmcp@2.7.0`, which reads `.xcodebuildmcp/`, so
+  move the skill and the server pin in `~/.codex/config.toml` together.
+
 ## Superseded
 
 `~/.agents/.skill-lock.json` (the `npx skills` CLI) is left in place for reference,

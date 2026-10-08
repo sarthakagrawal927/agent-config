@@ -2,7 +2,7 @@ diff -ruN a/.graphify_version b/.graphify_version
 --- a/.graphify_version	1970-01-01 05:30:00
 +++ b/.graphify_version	2026-10-08 23:44:50
 @@ -0,0 +1 @@
-+0.8.47
++0.9.80
 \ No newline at end of file
 diff -ruN a/agents/openai.yaml b/agents/openai.yaml
 --- a/agents/openai.yaml	1970-01-01 05:30:00

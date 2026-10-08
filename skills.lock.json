@@ -87,7 +87,7 @@
       "name": "brag",
       "type": "git-pinned",
       "url": "https://github.com/latent-spaces/brag.git",
-      "commit": "fd7de7e418334876b3ea4e9258231a66a2c2a38d",
+      "commit": "7079945d391573edebe48fdc0a23b39c4b4e8726",
       "path": "skills/brag",
       "targets": [
         "agents",
@@ -109,7 +109,7 @@
       "name": "better-typography",
       "type": "git-pinned",
       "url": "https://github.com/jakubkrehel/skills.git",
-      "commit": "267330e1adfc66a718fb65fa6918c1f06d0a689e",
+      "commit": "d574cc8a576dc24256ad38268b8d03d86724a1b3",
       "path": "skills/better-typography",
       "targets": [
         "agents",
@@ -120,7 +120,7 @@
       "name": "better-ui",
       "type": "git-pinned",
       "url": "https://github.com/jakubkrehel/skills.git",
-      "commit": "267330e1adfc66a718fb65fa6918c1f06d0a689e",
+      "commit": "d574cc8a576dc24256ad38268b8d03d86724a1b3",
       "path": "skills/better-ui",
       "targets": [
         "agents",
@@ -145,24 +145,25 @@
       "name": "sentry-cli",
       "type": "git-pinned",
       "url": "https://github.com/getsentry/cli.git",
-      "commit": "2e9547d399973527116bd14fdbbff9555866e574",
-      "path": "plugins/sentry-cli/skills/sentry-cli",
+      "commit": "bda866202ebd19593b0dd9c1f8c5ea40c7af50c7",
+      "path": "packages/cli/plugins/sentry-cli/skills/sentry-cli",
       "targets": [
         "agents",
         "claude"
       ],
-      "note": "Upstream later moved this to packages/cli/plugins/sentry-cli/skills/sentry-cli; bump reports the path change."
+      "note": "Followed upstream's move from plugins/sentry-cli/skills/sentry-cli (2026-10-09); same skill name and description."
     },
     {
       "name": "xcodebuildmcp",
       "type": "git-pinned",
       "url": "https://github.com/getsentry/XcodeBuildMCP.git",
-      "commit": "4f9a3102b919b454c30ee5f0071d24f1b50246fc",
+      "commit": "c79f4eb9b7b96680d5a774acb0ae525416d254fb",
       "path": "skills/xcodebuildmcp",
       "targets": [
         "codex"
       ],
-      "note": "Upstream renamed the project to MobileBuildMCP (skills/mobilebuildmcp); this pin keeps the xcodebuildmcp skill."
+      "note": "Held at tag v2.7.0, the last XcodeBuildMCP release, to match the Codex MCP server pin (xcodebuildmcp@2.7.0, which reads .xcodebuildmcp/config.yaml). Upstream 2.7.1 renamed it MobileBuildMCP (skills/mobilebuildmcp, .mobilebuildmcp/config.yaml); move this skill only together with the MCP server pin in ~/.codex/config.toml.",
+      "ref": "v2.7.0"
     },
     {
       "name": "app-store-review",
@@ -193,7 +194,7 @@
       "name": "graphify",
       "type": "git-pinned",
       "url": "https://github.com/Graphify-Labs/graphify.git",
-      "commit": "f87011b38e31251a818d28c228979081bad1d33e",
+      "commit": "6478eb71237c86ee5fb6a35c702835e987ca445d",
       "ref": "v8",
       "path": "graphify/skills/claude",
       "include": {
@@ -208,7 +209,7 @@
       "targets": [
         "claude"
       ],
-      "note": "Tag v0.8.47, the layout 'graphify install' (PyPI graphifyy) writes for Claude. Manual-only per ~/.claude/CLAUDE.md."
+      "note": "Tag v0.9.80 on branch v8, the layout 'graphify install' (PyPI graphifyy) writes for Claude; the skill bootstraps the latest graphifyy via uv. Manual-only per ~/.claude/CLAUDE.md."
     },
     {
       "name": "analyze-storage",
