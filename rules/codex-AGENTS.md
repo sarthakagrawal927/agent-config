@@ -101,3 +101,7 @@ repo `AGENTS.md` files add repo specifics. Backup of the previous version:
 - Codex: prefix shell commands with `rtk` (e.g. `rtk git status`); use
   `rtk proxy <cmd>` when you need raw, unfiltered output.
 - Claude Code: a PreToolUse hook adds `rtk` automatically; don't prefix.
+- `rtk lint` (the hook's rewrite of `pnpm lint` / `biome ...`) masks Biome errors
+  behind a fake "Linter process terminated abnormally" warning and exits 0. Lint
+  commands are excluded in `~/Library/Application Support/rtk/config.toml`
+  (`hooks.exclude_commands`); never run bare `rtk lint`, use `rtk proxy pnpm lint`.
