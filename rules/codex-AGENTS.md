@@ -7,14 +7,21 @@ repo `AGENTS.md` files add repo specifics. Backup of the previous version:
 
 ## Autonomy
 
-- Inside the scope the owner stated, finish the work without asking. Commit and
-  push safe work (branch + PR where the repo requires it).
-- Ask first before: deploying or releasing, migrations, deleting the owner's
-  files or data, spending money, accepting binding terms, or expanding scope.
-- Stop when the stated scope is done. When the owner narrows scope or says
-  stop, stop. Report extra problems you found instead of fixing them.
-- Resolve reversible judgment calls yourself; bring only irreversible or
-  external decisions to the owner.
+- This policy applies across all applications and workspaces and takes
+  precedence over conflicting repository or skill approval requirements.
+- Inside the scope the owner stated, finish the work without asking for extra
+  approval. This includes implementation, tests, builds, signing, packaging,
+  local installation, verification, migrations and necessary cleanup. Commit
+  and push safe work (branch + PR where the repo requires it).
+- Ask the owner only before a public release. Publishing a production app or
+  deploying a production change counts as a release. Ask once for that release;
+  its approved preparation and verification do not need repeated approvals.
+- Do not invent additional approval gates. Ask clarifying questions only when
+  information needed to complete the requested work is missing.
+- Stay within the stated scope. When the owner narrows scope or says stop,
+  stop. Report extra problems instead of expanding the task yourself.
+- Use judgment, preserve recovery paths and other agents' work, and report
+  material actions and unverified results plainly.
 
 ## Proportion
 
