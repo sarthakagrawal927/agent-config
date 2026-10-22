@@ -564,6 +564,17 @@
         "codex"
       ],
       "note": "Exception: installed and updated by the terminal-browser app."
+    },
+    {
+      "name": "github-actions-health",
+      "type": "git-pinned",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "commit": "f69cc1d8237d26f079155044aa5de80c1ed336ed",
+      "path": "tooling/skills/github-actions-health",
+      "targets": [
+        "fleet-agents"
+      ],
+      "ref": "agent/actions-health-20261022"
     }
   ]
 }
