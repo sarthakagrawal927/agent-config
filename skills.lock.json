@@ -569,7 +569,7 @@
       "name": "github-actions-health",
       "type": "git-pinned",
       "url": "https://github.com/sass-maker/saas-maker.git",
-      "commit": "f69cc1d8237d26f079155044aa5de80c1ed336ed",
+      "commit": "f20944e89625a1842d23931c0ea3810d0c0dc885",
       "path": "tooling/skills/github-actions-health",
       "targets": [
         "fleet-agents"
