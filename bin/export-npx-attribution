@@ -137,7 +137,7 @@ for (const global of [true, false]) {
   }
   for (const skill of skills) {
     const before = lock.skills[skill.name];
-    const next = attribution(skill, before);
+    const next = { ...attribution(skill, before) };
     if (!global) next.computedHash = folderHash(skill.path);
     if (JSON.stringify(next) === JSON.stringify(before)) continue;
     lock.skills[skill.name] = global ? {
