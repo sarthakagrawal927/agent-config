@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Listicle Outreach"
+  short_description: "Find and qualify AI discovery listicle prospects"
+  default_prompt: "Use $ai-listicle-outreach to find relevant competitor-linked listicles and draft specific editorial pitches."

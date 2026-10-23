@@ -581,6 +581,28 @@
         "agents",
         "claude"
       ]
+    },
+    {
+      "name": "agentic-seo",
+      "type": "local",
+      "path": "skills/agentic-seo",
+      "targets": [
+        "agents",
+        "claude",
+        "codex"
+      ],
+      "note": "Owner-specific SEO workflow; private Git-backed skill. Shared Fleet authoring checkout was blocked by the workspace disk budget on 2026-10-23."
+    },
+    {
+      "name": "ai-listicle-outreach",
+      "type": "local",
+      "path": "skills/ai-listicle-outreach",
+      "targets": [
+        "agents",
+        "claude",
+        "codex"
+      ],
+      "note": "Owner-specific SEO workflow; private Git-backed skill. Shared Fleet authoring checkout was blocked by the workspace disk budget on 2026-10-23."
     }
   ],
   "attribution": {
