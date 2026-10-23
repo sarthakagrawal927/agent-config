@@ -38,6 +38,7 @@ bin/agent-config status                                     # sources, SHAs, dri
 bin/agent-config bump <name...|--all>                       # pinned entry -> latest upstream
 bin/agent-config add <name> --git <url> --path <sub> --targets agents,claude
 bin/agent-config add <name> --local <dir> --targets agents,claude
+node bin/export-npx-attribution                           # refresh npx skills source metadata
 ```
 
 `sync` will not replace a real file or folder unless it is identical to the source
@@ -67,8 +68,14 @@ hour. The log is `~/Library/Logs/com.sarthak.agent-config-sync.log`.
 
 ## Superseded
 
-`~/.agents/.skill-lock.json` (the `npx skills` CLI) is left in place for reference,
-but this repo supersedes it. **Do not run `npx skills add` or `npx skills update`.**
+`~/.agents/.skill-lock.json` and Fleet's `skills-lock.json` provide source
+attribution for `npx skills list --global --json` and `npx skills list --json`.
+Run `node bin/export-npx-attribution` after adding or changing skills. It exports
+this manifest's sources and pins, labels private and app-bundled skills as local,
+preserves existing npx installations' records, and backs up metadata it changes.
+It does not install, update or relink skills. Plugin and system skill catalogs
+remain owned by their providers. This repo remains the installation authority.
+**Do not run `npx skills add` or `npx skills update` over managed skills.**
 They would write over managed links. Use `add` and `bump` here instead.
 Likewise, add new skills here rather than through app installers
 (`npx impeccable install`, `graphify install`, the `spacefast` CLI).
