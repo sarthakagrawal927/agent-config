@@ -28,6 +28,7 @@ account information outside it.
     nested entries remain discoverable. Prefer `$pstack` to load the host adapter.
 - Targets are `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`, the Fleet
   folders `~/Desktop/fleet/.agents/skills` and `~/Desktop/fleet/.claude/skills`,
+  existing OpenClaw aliases in `~/.openclaw/skills`,
   and (for one note) `~/.config/devin/skills`. Every target entry is a symlink to
   `~/.local/share/agent-config/skills/<id>`. That path is a copy (pinned skills and
   skills with overrides), or a symlink into a source checkout or this repo.

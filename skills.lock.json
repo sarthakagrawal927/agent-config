@@ -13,7 +13,8 @@
     "cursor": {
       "dir": "~/.cursor/skills",
       "partial": true
-    }
+    },
+    "openclaw": "~/.openclaw/skills"
   },
   "ignore": {
     "claude": [
@@ -40,7 +41,8 @@
       "path": "skills/cloudflare",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -51,7 +53,8 @@
       "path": "skills/durable-objects",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -62,7 +65,8 @@
       "path": "skills/web-perf",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -73,7 +77,8 @@
       "path": "skills/workers-best-practices",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -84,7 +89,8 @@
       "path": "skills/wrangler",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -95,7 +101,8 @@
       "path": "skills/brag",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -106,7 +113,8 @@
       "path": "skills/brag-slim",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -117,7 +125,8 @@
       "path": "skills/better-typography",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -128,7 +137,8 @@
       "path": "skills/better-ui",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ]
     },
     {
@@ -139,7 +149,8 @@
       "path": ".",
       "targets": [
         "agents",
-        "claude"
+        "claude",
+        "openclaw"
       ],
       "overrides": {
         "disable-model-invocation": true
@@ -223,7 +234,8 @@
       "branch": "main",
       "path": "tooling/skills/analyze-storage",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -243,7 +255,8 @@
       "branch": "main",
       "path": "tooling/skills/call-teammate",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -253,7 +266,8 @@
       "branch": "main",
       "path": "tooling/skills/clarity-fleet-health",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -263,7 +277,8 @@
       "branch": "main",
       "path": "tooling/skills/code-cleanup",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -275,7 +290,8 @@
       "targets": [
         "agents",
         "claude",
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -285,7 +301,8 @@
       "branch": "main",
       "path": "tooling/skills/fleet-deploy-parity",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -295,7 +312,8 @@
       "branch": "main",
       "path": "tooling/skills/fleet-ops",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -326,7 +344,8 @@
       "branch": "main",
       "path": "tooling/skills/local-ports-cleanup",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -346,7 +365,8 @@
       "branch": "main",
       "path": "tooling/skills/media-acquisition",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -356,7 +376,8 @@
       "branch": "main",
       "path": "tooling/skills/mobile-task-control",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -368,7 +389,8 @@
       "targets": [
         "claude",
         "fleet-agents",
-        "fleet-claude"
+        "fleet-claude",
+        "openclaw"
       ]
     },
     {
@@ -389,7 +411,8 @@
       "branch": "main",
       "path": "tooling/skills/seo-research",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -399,7 +422,8 @@
       "branch": "main",
       "path": "tooling/skills/site-health",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -419,7 +443,8 @@
       "branch": "main",
       "path": "tooling/skills/spec-driven",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
@@ -439,7 +464,8 @@
       "branch": "main",
       "path": "tooling/skills/web-extraction",
       "targets": [
-        "fleet-agents"
+        "fleet-agents",
+        "openclaw"
       ]
     },
     {
