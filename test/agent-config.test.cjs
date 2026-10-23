@@ -103,6 +103,40 @@ test('status detects an installed revision behind the manifest', (t) => {
   assert.ok(f.messages.some((s) => s.includes('STALE')));
 });
 
+test('JSON status exposes drift and source ownership without instruction bodies', (t) => {
+  const f = fixture(t);
+  assert.equal(f.api.cmdSync(['example']), 0);
+  f.api.flags.json = true;
+  f.messages.length = 0;
+  assert.equal(f.api.cmdStatus(), 0);
+  assert.equal(f.messages.length, 1);
+  const report = JSON.parse(f.messages[0]);
+  assert.equal(report.schemaVersion, 1);
+  assert.equal(report.summary.entryCount, 1);
+  assert.equal(report.skills[0].revision, f.entry.commit);
+  assert.equal(report.skills[0].sourceURL, f.entry.url);
+  assert.equal(report.scope, 'all registered targets');
+  assert.ok(!f.messages[0].includes('Original content.'));
+  f.entry.overrides = { description: 'A revised skill' };
+  f.save();
+  assert.equal(f.api.cmdStatus(), 1);
+  assert.equal(JSON.parse(f.messages.at(-1)).skills[0].status, 'STALE-RECIPE');
+});
+
+test('changing patch contents invalidates the installed recipe without changing the pin', (t) => {
+  const f = fixture(t);
+  fs.mkdirSync(path.join(f.repo, 'patches'));
+  const patch = path.join(f.repo, 'patches/example.patch');
+  const body = '--- a/SKILL.md\n+++ b/SKILL.md\n@@ -5 +5 @@\n-Original content.\n+Patched content.\n';
+  fs.writeFileSync(patch, body);
+  f.entry.patch = 'patches/example.patch';
+  f.save();
+  assert.equal(f.api.cmdSync(['example']), 0);
+  fs.writeFileSync(patch, body.replace('Patched content.', 'Updated patch.'));
+  assert.equal(f.api.cmdStatus(), 1);
+  assert.ok(f.messages.some((s) => s.includes('STALE-RECIPE')));
+});
+
 test('status detects a materialized link that bypasses the pinned copy', (t) => {
   const f = fixture(t);
   assert.equal(f.api.cmdSync(['example']), 0);

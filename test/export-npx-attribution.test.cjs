@@ -56,3 +56,29 @@ test('persists content-only changes for an externally attributed Fleet skill', (
     assert.equal(result.status, 0, result.stderr);
   }
 });
+
+test('scheduled attribution does not read archived Desktop targets', () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'npx-attribution-desktop-'));
+  try {
+    const repo = path.join(fixture, '.agent-config');
+    const agents = path.join(fixture, '.agents/skills');
+    const archive = path.join(fixture, 'Desktop/fleet-archive/example/.agents/skills');
+    fs.mkdirSync(repo, { recursive: true });
+    fs.mkdirSync(agents, { recursive: true });
+    fs.writeFileSync(path.join(repo, 'skills.lock.json'), JSON.stringify({ skills: [], targets: { agents, archive } }));
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../bin/export-npx-attribution'), 'utf8'), {
+      __dirname: path.join(repo, 'bin'), console: { log() {} },
+      process: { argv: ['node', 'export', '--skip-desktop'] },
+      require(name) {
+        if (name === 'os') return { homedir: () => fixture };
+        if (name === 'fs') return { ...fs, readdirSync(dir, ...args) {
+          assert.ok(!dir.startsWith(path.join(fixture, 'Desktop')), 'unattended export must not inspect Desktop');
+          return fs.readdirSync(dir, ...args);
+        } };
+        return require(name);
+      },
+    });
+  } finally {
+    assert.equal(spawnSync('/usr/bin/trash', [fixture]).status, 0);
+  }
+});

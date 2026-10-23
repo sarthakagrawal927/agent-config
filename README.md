@@ -41,7 +41,7 @@ account information outside it.
 
 ```sh
 bin/agent-config sync [name...] [--adopt] [--skip-desktop]  # fetch, materialize, link
-bin/agent-config status                                     # sources, SHAs, drift, unmanaged
+bin/agent-config status [--json]                            # sources, SHAs, drift, unmanaged
 bin/agent-config schedule                                   # install hourly macOS maintenance
 bin/agent-config bump <name...|--all>                       # pinned entry -> latest upstream
 bin/agent-config add <name> --git <url> --path <sub> --targets agents,claude
@@ -106,3 +106,9 @@ remain owned by their providers. This repo remains the installation authority.
 They would write over managed links. Use `add` and `bump` here instead.
 Likewise, add new skills here rather than through app installers
 (`npx impeccable install`, `graphify install`, the `spacefast` CLI).
+
+ContextDaddy reads `status --json` schema 1 without syncing or changing skills.
+The report separates registered installation health from hourly maintenance and
+broader discovery. Changed pin, patch, or invocation recipes require sync before
+the materialized copy is current. Existing archive and agent aliases are registered
+without changing the capabilities each agent had available.

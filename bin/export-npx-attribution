@@ -107,6 +107,7 @@ for (const global of [true, false]) {
   const dirs = new Set();
   for (const target of Object.values(manifest.targets)) {
     const dir = expand(typeof target === 'string' ? target : target.dir);
+    if (process.argv?.includes('--skip-desktop') && dir.startsWith(path.join(home, 'Desktop') + '/')) continue;
     if (dir.startsWith(fleet + '/') !== global) dirs.add(dir);
   }
   for (const dir of dirs) {

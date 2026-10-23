@@ -14,7 +14,15 @@
       "dir": "~/.cursor/skills",
       "partial": true
     },
-    "openclaw": "~/.openclaw/skills"
+    "openclaw": "~/.openclaw/skills",
+    "archive-email-manager": "~/Desktop/fleet-archive/email-manager/.agents/skills",
+    "archive-motion": "~/Desktop/fleet-archive/motion/.agents/skills",
+    "archive-email-manager-claude": "~/Desktop/fleet-archive/email-manager/.claude/skills",
+    "archive-motion-claude": "~/Desktop/fleet-archive/motion/.claude/skills",
+    "grok": {
+      "dir": "~/.grok/skills",
+      "partial": true
+    }
   },
   "ignore": {
     "claude": [
@@ -42,7 +50,10 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok",
+        "cursor"
       ]
     },
     {
@@ -54,7 +65,10 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok",
+        "cursor"
       ]
     },
     {
@@ -66,7 +80,10 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok",
+        "cursor"
       ]
     },
     {
@@ -78,7 +95,10 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok",
+        "cursor"
       ]
     },
     {
@@ -90,7 +110,10 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok",
+        "cursor"
       ]
     },
     {
@@ -102,7 +125,9 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok"
       ]
     },
     {
@@ -114,7 +139,9 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok"
       ]
     },
     {
@@ -126,7 +153,9 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok"
       ]
     },
     {
@@ -138,7 +167,9 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok"
       ]
     },
     {
@@ -150,7 +181,9 @@
       "targets": [
         "agents",
         "claude",
-        "openclaw"
+        "openclaw",
+        "devin",
+        "grok"
       ],
       "overrides": {
         "disable-model-invocation": true
@@ -202,7 +235,11 @@
       "targets": [
         "claude",
         "fleet-agents",
-        "fleet-claude"
+        "fleet-claude",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude"
       ],
       "note": "Tag skill-v4.0.2 (npm impeccable@3.3.1 installs this skill version per saas-maker tooling/config/design-workflow.json). Patch keeps the owner edits: installer frontmatter, disable-model-invocation, Codex critique gate, Persuade comprehension checks."
     },
@@ -235,7 +272,9 @@
       "path": "tooling/skills/analyze-storage",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -256,7 +295,10 @@
       "path": "tooling/skills/call-teammate",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "devin"
       ]
     },
     {
@@ -267,7 +309,9 @@
       "path": "tooling/skills/clarity-fleet-health",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -278,7 +322,9 @@
       "path": "tooling/skills/code-cleanup",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -291,7 +337,9 @@
         "agents",
         "claude",
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -302,7 +350,9 @@
       "path": "tooling/skills/fleet-deploy-parity",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -313,7 +363,10 @@
       "path": "tooling/skills/fleet-ops",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "devin"
       ]
     },
     {
@@ -345,7 +398,9 @@
       "path": "tooling/skills/local-ports-cleanup",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -366,7 +421,9 @@
       "path": "tooling/skills/media-acquisition",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -377,7 +434,9 @@
       "path": "tooling/skills/mobile-task-control",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -390,7 +449,13 @@
         "claude",
         "fleet-agents",
         "fleet-claude",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude",
+        "devin",
+        "grok"
       ]
     },
     {
@@ -412,7 +477,9 @@
       "path": "tooling/skills/seo-research",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -423,7 +490,9 @@
       "path": "tooling/skills/site-health",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -444,7 +513,10 @@
       "path": "tooling/skills/spec-driven",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "devin"
       ]
     },
     {
@@ -465,7 +537,9 @@
       "path": "tooling/skills/web-extraction",
       "targets": [
         "fleet-agents",
-        "openclaw"
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion"
       ]
     },
     {
@@ -515,7 +589,8 @@
       "targets": [
         "agents",
         "codex",
-        "devin"
+        "devin",
+        "cursor"
       ],
       "note": "Machine-specific account notes; private."
     },
@@ -550,7 +625,8 @@
         "codex",
         "cursor"
       ],
-      "note": "Exception: ships only inside Cardboard.app (no public repo). Rebuilt from the app on every sync."
+      "note": "Exception: ships only inside Cardboard.app (no public repo). Rebuilt from the app on every sync.",
+      "codexExplicitOnly": true
     },
     {
       "name": "coast-cli-skill",
@@ -659,6 +735,67 @@
       "targets": [
         "codex"
       ]
+    },
+    {
+      "name": "seo-audit",
+      "id": "fleet-seo-audit",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/seo-audit",
+      "targets": [
+        "devin"
+      ],
+      "note": "Existing Devin technical SEO workflow; distinct from SEOmator seo-audit in the universal agent directory."
+    },
+    {
+      "name": "animate",
+      "type": "git-pinned",
+      "url": "https://github.com/emilkowalski/skills.git",
+      "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+      "path": "skills/animate",
+      "include": {
+        ".": "skills/animate",
+        "LICENSE": "LICENSE"
+      },
+      "targets": [
+        "agents",
+        "claude"
+      ],
+      "note": "Emil Kowalski, MIT. Selected specialist guidance; Fleet design-workflow remains the design entry point.",
+      "patch": "patches/emil-animate.patch"
+    },
+    {
+      "name": "animation-performance",
+      "type": "git-pinned",
+      "url": "https://github.com/emilkowalski/skills.git",
+      "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+      "path": "skills/animation-performance",
+      "include": {
+        ".": "skills/animation-performance",
+        "LICENSE": "LICENSE"
+      },
+      "targets": [
+        "agents",
+        "claude"
+      ],
+      "note": "Emil Kowalski, MIT. Selected specialist guidance; Fleet design-workflow remains the design entry point."
+    },
+    {
+      "name": "mobile-native",
+      "type": "git-pinned",
+      "url": "https://github.com/emilkowalski/skills.git",
+      "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+      "path": "skills/mobile-native",
+      "include": {
+        ".": "skills/mobile-native",
+        "LICENSE": "LICENSE"
+      },
+      "targets": [
+        "agents",
+        "claude"
+      ],
+      "note": "Emil Kowalski, MIT. Selected specialist guidance; Fleet design-workflow remains the design entry point."
     }
   ]
 }

@@ -1,0 +1,11 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -78,7 +78,7 @@
+ 
+ CSS animations beat JS under load — they run off the main thread, while `requestAnimationFrame`-based animation drops frames while the browser loads, scripts, or paints. Use CSS for predetermined motion, JS for dynamic and interruptible motion.
+ 
+-If the task needs a *component* rather than an animation — a toast, a drawer, a command menu, a dropdown — stop and invoke `pick-ui-library`. Hand-rolling those is how you end up with a `<div>` dropdown and no focus management.
++If the task needs a component rather than an animation, use the existing repository component first, then Fleet design-workflow’s maintained-library guidance. Use pick-ui-library only if it is installed and explicitly requested. Preserve focus management and the established design direction.
+ 
+ ### 4. Pick the properties
+ 

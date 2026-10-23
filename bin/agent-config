@@ -216,6 +216,14 @@ function applyOverrides(file, overrides) {
 // ---------- materialization ----------
 function needsCopy(e) { return Boolean(e.overrides || e.patch || e.include || e.codexExplicitOnly); }
 
+function recipeHash(e) {
+  return crypto.createHash('sha256').update(JSON.stringify([
+    e.type, e.url || null, e.commit || e.branch || null, e.path, e.include || null,
+    e.overrides || null, e.codexExplicitOnly || false,
+    e.patch ? fs.readFileSync(path.join(REPO, e.patch), 'base64') : null,
+  ])).digest('hex');
+}
+
 function applyCodexPolicy(staging) {
   for (const file of walkFiles(staging).filter((f) => path.basename(f) === 'SKILL.md')) {
     const config = path.join(path.dirname(file), 'agents/openai.yaml');
@@ -309,7 +317,7 @@ function materialize(e, state) {
   const cur = lstat(dest);
   if (cur && !cur.isSymbolicLink()) {
     const curHash = hashTree(dest);
-    if (curHash === newHash) { trash(staging); state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null }; return dest; }
+    if (curHash === newHash) { trash(staging); state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null, recipe: recipeHash(e) }; return dest; }
     const prev = state[e.id];
     if (!prev?.hash || curHash !== prev.hash) {
       if (!FLAGS.adopt) { trash(staging); warn(`${e.id}: materialized copy has local edits; skipped (use --adopt to back it up)`); return dest; }
@@ -317,7 +325,7 @@ function materialize(e, state) {
     } else trash(dest);
   } else if (cur) trash(dest);
   fs.renameSync(staging, dest);
-  state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null };
+  state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null, recipe: recipeHash(e) };
   log(`${e.id}: materialized ${e.commit ? e.commit.slice(0, 12) : e.type}`);
   return dest;
 }
@@ -411,10 +419,33 @@ function upstreamLabel(e) {
   return `${short(expand(e.path))} (${String(e.appVersion || "?").replace(/^v?/, "v")})`;
 }
 
+function maintenanceStatus() {
+  if (process.platform !== 'darwin') return { status: 'unsupported', scope: 'non-Desktop targets' };
+  const file = path.join(HOME, 'Library/LaunchAgents/com.sarthak.agent-config-sync.plist');
+  const result = { status: 'not-installed', scope: 'non-Desktop targets', intervalSeconds: 3600 };
+  if (!lstat(file)) return result;
+  try {
+    const job = JSON.parse(run('plutil', ['-convert', 'json', '-o', '-', file]));
+    const args = job.ProgramArguments || [];
+    if (args.length !== 4 || args[1] !== path.join(REPO, 'bin/agent-config') || args[2] !== 'sync' || args[3] !== '--skip-desktop' || job.StartInterval !== 3600) {
+      return { ...result, status: 'different-command' };
+    }
+    const r = run('launchctl', ['print', `gui/${process.getuid()}/com.sarthak.agent-config-sync`], { full: true, allowFail: true });
+    if (r.status !== 0) return { ...result, status: 'not-loaded' };
+    const match = r.stdout.match(/last exit code = (\d+)/);
+    const running = /^\s*state = running$/m.test(r.stdout);
+    const lastExitCode = match ? Number(match[1]) : null;
+    return { ...result, status: lastExitCode === 0 ? 'healthy' : lastExitCode !== null ? 'failed' : running ? 'running' : 'not-yet-run', running, lastExitCode };
+  } catch { return { ...result, status: 'unverified' }; }
+}
+
 function cmdStatus() {
   const lock = loadLock();
   const state = readJSON(STATE, {});
   const rows = [];
+  const skills = [], unmanagedEntries = [], rules = [], inaccessibleTargets = [];
+  const output = [];
+  const emit = (line) => output.push(line);
   let problems = 0;
   const declared = {};
   for (const e of lock.skills) {
@@ -432,8 +463,10 @@ function cmdStatus() {
       }
     } else if (state[e.id] && state[e.id].hash && hashTree(dest) !== state[e.id].hash) mat = 'LOCAL-EDITS';
     else if (e.type === 'git-pinned' && state[e.id]?.rev !== e.commit) mat = 'STALE';
+    else if ((e.type === 'git-pinned' || needsCopy(e)) && state[e.id]?.recipe !== recipeHash(e)) mat = 'STALE-RECIPE';
     if (e.type === 'app-bundled') { const v = appVersion(e); if (v && e.appVersion && v !== e.appVersion) mat += ` (app now v${v})`; }
     const tstat = [];
+    const targets = [];
     for (const t of e.targets) {
       (declared[t] = declared[t] || new Set()).add(e.name);
       const dir = targetDir(lock, t);
@@ -448,15 +481,20 @@ function cmdStatus() {
       } catch (err) { s = err.code === 'EPERM' ? 'no-access' : 'error'; }
       if (s !== 'ok') problems++;
       tstat.push(`${t}:${s}`);
+      targets.push({ name: t, path: p, status: s });
     }
     if (mat !== 'ok') problems++;
     rows.push([e.name + (e.id !== e.name ? ` [${e.id}]` : ''), e.type, upstreamLabel(e), mat, tstat.join(' ')]);
+    skills.push({ id: e.id, name: e.name, type: e.type, materializedPath: dest,
+      physicalPath: fs.existsSync(dest) ? fs.realpathSync(dest) : dest,
+      sourceURL: e.url || null, revision: e.commit || (e.type === 'git-track' ? git(repoDirFor(e.url), ['rev-parse', 'HEAD']).trim() : null),
+      sourcePath: e.path, patch: e.patch || null, explicitOnly: Boolean(e.codexExplicitOnly), status: mat, targets });
   }
   const w = [0, 0, 0, 0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
-  console.log('SKILLS');
-  for (const r of rows) console.log('  ' + r.slice(0, 4).map((c, i) => c.padEnd(w[i])).join('  ') + '  ' + r[4]);
+  emit('SKILLS');
+  for (const r of rows) emit('  ' + r.slice(0, 4).map((c, i) => c.padEnd(w[i])).join('  ') + '  ' + r[4]);
 
-  console.log('\nUNMANAGED (in target dirs, not in skills.lock.json)');
+  emit('\nUNMANAGED (in target dirs, not in skills.lock.json)');
   let unmanaged = 0;
   for (const [t, spec] of Object.entries(lock.targets)) {
     if (typeof spec === 'object' && spec.partial) continue;
@@ -464,19 +502,20 @@ function cmdStatus() {
     if (skipTarget(dir)) continue;
     const ignore = new Set((lock.ignore && lock.ignore[t]) || []);
     let names;
-    try { names = fs.readdirSync(dir); } catch (err) { console.log(`  ${t}: cannot read ${short(dir)} (${err.code})`); problems++; continue; }
+    try { names = fs.readdirSync(dir); } catch (err) { emit(`  ${t}: cannot read ${short(dir)} (${err.code})`); inaccessibleTargets.push({ name: t, path: dir }); problems++; continue; }
     for (const n of names.sort()) {
       if (n.startsWith('.') || ignore.has(n) || (declared[t] && declared[t].has(n))) continue;
       const p = path.join(dir, n);
       const l = lstat(p);
       const desc = l.isSymbolicLink() ? `-> ${fs.readlinkSync(p)}` : 'real dir';
-      console.log(`  ${t}/${n}  ${desc}`);
+      emit(`  ${t}/${n}  ${desc}`);
+      unmanagedEntries.push({ target: t, name: n, path: p });
       unmanaged++;
     }
   }
-  if (!unmanaged) console.log('  none');
+  if (!unmanaged) emit('  none');
 
-  console.log('\nRULES');
+  emit('\nRULES');
   for (const r of lock.rules || []) {
     const t = expand(r.target);
     if (skipTarget(t)) continue;
@@ -484,11 +523,19 @@ function cmdStatus() {
     const want = path.join(REPO, r.source);
     const s = !l ? 'missing' : !l.isSymbolicLink() ? 'UNLINKED (real file; edits are not in git)' : fs.readlinkSync(t) === want ? 'ok' : 'WRONG-LINK';
     if (s !== 'ok') problems++;
-    console.log(`  ${r.target} -> ${r.source}: ${s}`);
+    emit(`  ${r.target} -> ${r.source}: ${s}`);
+    rules.push({ path: t, status: s });
   }
   const dirty = git(REPO, ['status', '--porcelain']).trim();
-  console.log(`\nREPO ${short(REPO)}: ${dirty ? 'UNCOMMITTED CHANGES\n' + dirty.split('\n').map((l) => '  ' + l).join('\n') : 'clean'}`);
-  console.log(`\n${lock.skills.length} skills, ${problems} problem(s), ${unmanaged} unmanaged`);
+  const maintenance = maintenanceStatus();
+  emit(`\nREPO ${short(REPO)}: ${dirty ? 'UNCOMMITTED CHANGES\n' + dirty.split('\n').map((l) => '  ' + l).join('\n') : 'clean'}`);
+  emit(`MAINTENANCE: ${maintenance.status} (${maintenance.scope})`);
+  emit(`\n${lock.skills.length} skills, ${problems} problem(s), ${unmanaged} unmanaged`);
+  if (FLAGS.json) console.log(JSON.stringify({ schemaVersion: 1, generatedAt: new Date().toISOString(),
+    repository: REPO, repositoryDirty: Boolean(dirty), scope: FLAGS['skip-desktop'] ? 'non-Desktop targets' : 'all registered targets',
+    summary: { entryCount: lock.skills.length, problemCount: problems, unmanagedCount: unmanaged },
+    skills, rules, unmanaged: unmanagedEntries, inaccessibleTargets, maintenance }));
+  else for (const line of output) console.log(line);
   return problems || unmanaged ? 1 : 0;
 }
 
