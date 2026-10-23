@@ -583,18 +583,6 @@
       ]
     },
     {
-      "name": "spacefast-account",
-      "type": "local",
-      "path": "skills/spacefast-account",
-      "targets": [
-        "agents",
-        "codex",
-        "devin",
-        "cursor"
-      ],
-      "note": "Machine-specific account notes; private."
-    },
-    {
       "name": "vaultwealth",
       "type": "local",
       "path": "skills/vaultwealth",
