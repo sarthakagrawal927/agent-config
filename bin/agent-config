@@ -582,13 +582,16 @@ function cmdSchedule() {
   const label = 'com.sarthak.agent-config-sync';
   const file = path.join(HOME, 'Library/LaunchAgents', `${label}.plist`);
   const logFile = path.join(HOME, 'Library/Logs', `${label}.log`);
+  // Prefer Homebrew's stable link so a Node upgrade does not orphan the job.
+  const node = ['/opt/homebrew/bin/node', '/usr/local/bin/node'].find((p) =>
+    lstat(p) && fs.realpathSync(p) === fs.realpathSync(process.execPath)) || process.execPath;
   const job = {
     Label: label,
-    ProgramArguments: [process.execPath, path.join(REPO, 'bin/agent-config'), 'sync', '--skip-desktop'],
+    ProgramArguments: [node, path.join(REPO, 'bin/agent-config'), 'sync', '--skip-desktop'],
     StartInterval: 3600,
     StandardOutPath: logFile,
     StandardErrorPath: logFile,
-    EnvironmentVariables: { PATH: `${path.dirname(process.execPath)}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin` },
+    EnvironmentVariables: { PATH: `${path.dirname(node)}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin` },
   };
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
