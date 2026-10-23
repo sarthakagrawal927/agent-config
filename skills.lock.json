@@ -603,6 +603,24 @@
         "codex"
       ],
       "note": "Owner-specific SEO workflow; private Git-backed skill. Shared Fleet authoring checkout was blocked by the workspace disk budget on 2026-10-23."
+    },
+    {
+      "name": "pstack",
+      "type": "git-pinned",
+      "url": "https://github.com/cursor/plugins.git",
+      "commit": "8b3326d99fd4b993cb33a24dad8af03175c642c5",
+      "path": "pstack",
+      "include": {
+        "SKILL.md": "pstack/skills/poteto-mode/SKILL.md",
+        "upstream": "pstack",
+        "LICENSE": "pstack/LICENSE"
+      },
+      "patch": "patches/pstack-codex.patch",
+      "targets": [
+        "agents",
+        "codex"
+      ],
+      "note": "PStack 0.15.30 by Lauren Tan (poteto). Codex adapter at the root; complete unmodified upstream pack nested under upstream. Original manual invocation policy retained; no Cursor model rules or hooks installed."
     }
   ],
   "attribution": {
