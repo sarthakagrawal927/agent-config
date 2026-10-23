@@ -9,6 +9,10 @@
     "devin": {
       "dir": "~/.config/devin/skills",
       "partial": true
+    },
+    "cursor": {
+      "dir": "~/.cursor/skills",
+      "partial": true
     }
   },
   "ignore": {
@@ -526,7 +530,8 @@
       "targets": [
         "agents",
         "claude",
-        "codex"
+        "codex",
+        "cursor"
       ],
       "note": "Exception: ships only inside Cardboard.app (no public repo). Rebuilt from the app on every sync."
     },
