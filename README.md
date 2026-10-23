@@ -1,7 +1,9 @@
 # agent-config
 
-The single Git source for the owner's global agent rules and every agent skill
-on this machine. Private on purpose: it holds private skills and machine notes.
+The Git source for owner-managed global agent rules, skill sources and host
+adaptations on this machine. Provider plugins and system skills remain managed
+by their providers. This repository is public; keep credentials and private
+account information outside it.
 
 ## Model
 
@@ -14,12 +16,16 @@ on this machine. Private on purpose: it holds private skills and machine notes.
     Move it forward with `bump`.
   - `git-track`: the owner's own repos, following a branch (saas-maker `main`,
     codevetter `main`).
-  - `local`: owner-private skills kept in `skills/` in this repo.
+  - `local`: owner-authored skills kept in `skills/` in this repo.
   - `app-bundled`: an explicit exception for skills that ship only inside an app
     (`path` plus the app version that was reviewed).
   - Optional on any entry: `overrides` (frontmatter keys to set), `include` (build
     the skill from several upstream paths), `patch` (a file in `patches/` that holds
     local edits). These are applied to the materialized copy only, never to upstream.
+  - `codexExplicitOnly: true`: generate Codex's supported
+    `agents/openai.yaml` invocation policy beside every included `SKILL.md`,
+    including nested skills. Preserve other metadata. PStack is opt-in; its
+    nested entries remain discoverable. Prefer `$pstack` to load the host adapter.
 - Targets are `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`, the Fleet
   folders `~/Desktop/fleet/.agents/skills` and `~/Desktop/fleet/.claude/skills`,
   and (for one note) `~/.config/devin/skills`. Every target entry is a symlink to
@@ -35,10 +41,12 @@ on this machine. Private on purpose: it holds private skills and machine notes.
 ```sh
 bin/agent-config sync [name...] [--adopt] [--skip-desktop]  # fetch, materialize, link
 bin/agent-config status                                     # sources, SHAs, drift, unmanaged
+bin/agent-config schedule                                   # install hourly macOS maintenance
 bin/agent-config bump <name...|--all>                       # pinned entry -> latest upstream
 bin/agent-config add <name> --git <url> --path <sub> --targets agents,claude
 bin/agent-config add <name> --local <dir> --targets agents,claude
-node bin/export-npx-attribution                           # refresh npx skills source metadata
+node bin/export-npx-attribution                           # metadata only; sync does this automatically
+node --test test/*.test.cjs                               # isolated management regression checks
 ```
 
 `sync` will not replace a real file or folder unless it is identical to the source
@@ -46,8 +54,25 @@ or you pass `--adopt`. Anything it replaces moves to
 `~/.agent-config-backups/<date>/agent-config/`, and anything it removes goes to the
 Trash. It never deletes.
 
-The launchd job `com.sarthak.agent-config-sync` runs `sync --skip-desktop` every
-hour. The log is `~/Library/Logs/com.sarthak.agent-config-sync.log`.
+`sync` refreshes attribution and checks health before returning. A skipped edit,
+stale pin, missing target or unmanaged skill makes it return nonzero. It refuses
+different unrecorded materialized content even if its state file is missing.
+
+Install or repair the hourly job from the canonical checkout with
+`bin/agent-config schedule`. The launchd job `com.sarthak.agent-config-sync`
+runs `sync --skip-desktop`; its log is
+`~/Library/Logs/com.sarthak.agent-config-sync.log`. macOS blocks unattended
+Desktop access, so run a manual full `sync` after changing Fleet skills.
+The job follows owner-repository branches; it does not bump third-party pins.
+
+For maintenance, run `status`, review a selected upstream change with
+`bump <name>`, then run `sync` and a real task appropriate to that skill. Inspect
+the diff before committing. For a conflicting install, identify its exact
+revision and preserve edits as a patch before adopting it. Use `--adopt` only
+after that comparison. Keep useful common skills global, project-specific
+skills scoped, and experimental workflows opt-in. Avoid duplicate copies.
+To roll back an update, restore its manifest entry and patch from Git and sync;
+replaced installations are also retained in the dated backup directory.
 
 ## Held pins
 
@@ -66,14 +91,15 @@ hour. The log is `~/Library/Logs/com.sarthak.agent-config-sync.log`.
   MCP server is pinned to `xcodebuildmcp@2.7.0`, which reads `.xcodebuildmcp/`, so
   move the skill and the server pin in `~/.codex/config.toml` together.
 
-## Superseded
+## npx compatibility
 
 `~/.agents/.skill-lock.json` and Fleet's `skills-lock.json` provide source
 attribution for `npx skills list --global --json` and `npx skills list --json`.
-Run `node bin/export-npx-attribution` after adding or changing skills. It exports
-this manifest's sources and pins, labels private and app-bundled skills as local,
+Every sync exports
+this manifest's sources and pins, labels owner-authored and app-bundled skills as local,
 preserves existing npx installations' records, and backs up metadata it changes.
-It does not install, update or relink skills. Plugin and system skill catalogs
+The exporter reads installed directories without downloading or executing an npm
+package. It does not install, update or relink skills. Plugin and system skill catalogs
 remain owned by their providers. This repo remains the installation authority.
 **Do not run `npx skills add` or `npx skills update` over managed skills.**
 They would write over managed links. Use `add` and `bump` here instead.

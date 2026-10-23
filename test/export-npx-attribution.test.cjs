@@ -35,9 +35,7 @@ test('persists content-only changes for an externally attributed Fleet skill', (
         require(name) {
           if (name === 'os') return { homedir: () => fixture };
           if (name === 'child_process') return { spawnSync(command, args) {
-            assert.equal(command, 'npx');
-            assert.deepEqual(Array.from(args).slice(0, 4), ['--yes', 'skills@1.7.4', 'list', ...(args.includes('--global') ? ['--global'] : ['--json'])]);
-            return { status: 0, stderr: '', stdout: JSON.stringify(args.includes('--global') ? [] : [{ name: 'external', path: skill }]) };
+            assert.fail(`export must not download or execute a CLI: ${command}`);
           } };
           return require(name);
         },

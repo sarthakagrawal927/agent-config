@@ -36,7 +36,7 @@
       "name": "cloudflare",
       "type": "git-pinned",
       "url": "https://github.com/cloudflare/skills.git",
-      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "commit": "be9f5e1e940fcf8567ff723cc03b8a8448c4082f",
       "path": "skills/cloudflare",
       "targets": [
         "agents",
@@ -69,7 +69,7 @@
       "name": "workers-best-practices",
       "type": "git-pinned",
       "url": "https://github.com/cloudflare/skills.git",
-      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "commit": "cf56dd4c544917ca6692a475b65a181f2845d557",
       "path": "skills/workers-best-practices",
       "targets": [
         "agents",
@@ -80,7 +80,7 @@
       "name": "wrangler",
       "type": "git-pinned",
       "url": "https://github.com/cloudflare/skills.git",
-      "commit": "41e0d19858946d18af9ee2c2feebbe2e11d829ff",
+      "commit": "cf56dd4c544917ca6692a475b65a181f2845d557",
       "path": "skills/wrangler",
       "targets": [
         "agents",
@@ -91,7 +91,7 @@
       "name": "brag",
       "type": "git-pinned",
       "url": "https://github.com/latent-spaces/brag.git",
-      "commit": "7079945d391573edebe48fdc0a23b39c4b4e8726",
+      "commit": "069432cac935ed1895859df201c31436c07fb74e",
       "path": "skills/brag",
       "targets": [
         "agents",
@@ -102,7 +102,7 @@
       "name": "brag-slim",
       "type": "git-pinned",
       "url": "https://github.com/latent-spaces/brag.git",
-      "commit": "fd7de7e418334876b3ea4e9258231a66a2c2a38d",
+      "commit": "069432cac935ed1895859df201c31436c07fb74e",
       "path": "skills/brag-slim",
       "targets": [
         "agents",
@@ -135,7 +135,7 @@
       "name": "humanizer",
       "type": "git-pinned",
       "url": "https://github.com/blader/humanizer.git",
-      "commit": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+      "commit": "8c307f367c91bd974002f10f2be2965d642c13df",
       "path": ".",
       "targets": [
         "agents",
@@ -143,7 +143,8 @@
       ],
       "overrides": {
         "disable-model-invocation": true
-      }
+      },
+      "codexExplicitOnly": true
     },
     {
       "name": "sentry-cli",
@@ -620,16 +621,18 @@
         "agents",
         "codex"
       ],
-      "note": "PStack 0.15.30 by Lauren Tan (poteto). Codex adapter at the root; complete unmodified upstream pack nested under upstream. Original manual invocation policy retained; no Cursor model rules or hooks installed."
+      "note": "PStack 0.15.30 by Lauren Tan (poteto). Codex adapter at the root; upstream text preserved under upstream, with generated explicit-only Codex invocation metadata beside every skill. No Cursor model rules or hooks installed.",
+      "codexExplicitOnly": true
+    },
+    {
+      "name": "anatomy",
+      "type": "git-pinned",
+      "url": "https://github.com/wheresryan22/anatomy.git",
+      "commit": "dbf697a527bbf7d358668e1557cb1e35ff725d46",
+      "path": ".",
+      "targets": [
+        "codex"
+      ]
     }
-  ],
-  "attribution": {
-    "anatomy": {
-      "source": "wheresryan22/anatomy",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/wheresryan22/anatomy.git",
-      "skillPath": "SKILL.md",
-      "attributionNote": "Upstream repository verified in the installed README; installed revision is not recorded."
-    }
-  }
+  ]
 }

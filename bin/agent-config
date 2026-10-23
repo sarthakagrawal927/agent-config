@@ -214,7 +214,32 @@ function applyOverrides(file, overrides) {
 }
 
 // ---------- materialization ----------
-function needsCopy(e) { return Boolean(e.overrides || e.patch || e.include); }
+function needsCopy(e) { return Boolean(e.overrides || e.patch || e.include || e.codexExplicitOnly); }
+
+function applyCodexPolicy(staging) {
+  for (const file of walkFiles(staging).filter((f) => path.basename(f) === 'SKILL.md')) {
+    const config = path.join(path.dirname(file), 'agents/openai.yaml');
+    let text = lstat(config) ? fs.readFileSync(config, 'utf8') : '';
+    // Refuse unsupported YAML rather than replacing provider metadata.
+    if (/^policy:.*\S.*$/m.test(text.replace(/^policy:\s*(?:#.*)?$/gm, 'policy:'))) {
+      throw new Error(`${config}: inline policy needs a reviewed adapter`);
+    }
+    if (/^policy:\s*(?:#.*)?$/m.test(text)) {
+      const lines = text.split('\n');
+      const start = lines.findIndex((line) => /^policy:\s*(?:#.*)?$/.test(line));
+      let end = start + 1;
+      while (end < lines.length && (!lines[end].trim() || /^\s|^#/.test(lines[end]))) end++;
+      const key = lines.findIndex((line, i) => i > start && i < end && /^ +allow_implicit_invocation:/.test(line));
+      const child = lines.slice(start + 1, end).find((line) => /^ +\S/.test(line));
+      const indent = child?.match(/^ +/)[0] || '  ';
+      if (key >= 0) lines[key] = `${indent}allow_implicit_invocation: false`;
+      else lines.splice(start + 1, 0, `${indent}allow_implicit_invocation: false`);
+      text = lines.join('\n');
+    } else text = text.trimEnd() + (text.trim() ? '\n\n' : '') + 'policy:\n  allow_implicit_invocation: false\n';
+    fs.mkdirSync(path.dirname(config), { recursive: true });
+    fs.writeFileSync(config, text);
+  }
+}
 
 function buildInto(e, staging) {
   let rev, dir, base;
@@ -240,6 +265,7 @@ function buildInto(e, staging) {
     if (r.status !== 0) throw new Error(`patch ${e.patch} did not apply: ${(r.stdout || '') + (r.stderr || '')}`.trim());
     for (const f of walkFiles(staging)) if (/\.orig$|\.rej$/.test(f)) trash(f);
   }
+  if (e.codexExplicitOnly) applyCodexPolicy(staging);
 }
 function walkFiles(dir) {
   const out = [];
@@ -268,9 +294,9 @@ function materialize(e, state) {
     const want = linkSource(e);
     const cur = lstat(dest);
     if (cur && !cur.isSymbolicLink()) {
-      const prev = state[e.id];
-      if (prev && hashTree(dest) !== prev.hash && !FLAGS.adopt) { warn(`${e.id}: materialized copy has local edits; skipped (use --adopt to back it up)`); return dest; }
-      if (prev && hashTree(dest) !== prev.hash) backup(dest); else trash(dest);
+      const identical = sameContent(dest, want);
+      if (!identical && !FLAGS.adopt) { warn(`${e.id}: materialized copy differs from source; skipped (use --adopt to back it up)`); return dest; }
+      if (!identical) backup(dest); else trash(dest);
     }
     if (!lstat(dest) || fs.readlinkSync(dest) !== want) symlinkAtomic(want, dest);
     state[e.id] = { kind: 'link', to: want };
@@ -285,7 +311,7 @@ function materialize(e, state) {
     const curHash = hashTree(dest);
     if (curHash === newHash) { trash(staging); state[e.id] = { kind: 'copy', hash: newHash, rev: e.commit || null }; return dest; }
     const prev = state[e.id];
-    if (prev && prev.hash && curHash !== prev.hash) {
+    if (!prev?.hash || curHash !== prev.hash) {
       if (!FLAGS.adopt) { trash(staging); warn(`${e.id}: materialized copy has local edits; skipped (use --adopt to back it up)`); return dest; }
       log(`${e.id}: local edits backed up to ${short(backup(dest))}`);
     } else trash(dest);
@@ -347,6 +373,7 @@ function cmdSync(args) {
   const lock = loadLock();
   const state = readJSON(STATE, {});
   const only = args.filter((a) => !a.startsWith('--'));
+  for (const name of only) if (!lock.skills.some((e) => e.id === name || e.name === name)) throw new Error(`unknown skill ${name}`);
   fs.mkdirSync(DATA, { recursive: true });
   for (const e of lock.skills) {
     if (only.length && !only.includes(e.id) && !only.includes(e.name)) continue;
@@ -365,8 +392,11 @@ function cmdSync(args) {
     if (skipTarget(t)) continue;
     try { ensureLink(t, path.join(REPO, r.source), r.source); } catch (err) { warn(`${r.target}: ${err.message}`); }
   }
+  // Attribution reflects the installed content and travels with every sync.
+  run(process.execPath, [path.join(REPO, 'bin/export-npx-attribution'), ...(FLAGS['skip-desktop'] ? ['--skip-desktop'] : [])]);
   console.log(`sync done ${new Date().toISOString()}${warnings.length ? ` with ${warnings.length} warning(s)` : ''}`);
-  return warnings.some((w) => /failed|refused|differs/.test(w)) ? 1 : 0;
+  const status = cmdStatus();
+  return warnings.length || status ? 1 : 0;
 }
 
 function upstreamLabel(e) {
@@ -395,16 +425,19 @@ function cmdStatus() {
     else if (st.isSymbolicLink()) {
       const to = fs.readlinkSync(dest);
       if (!lstat(to)) mat = 'BROKEN';
+      else if (e.type === 'git-pinned' || needsCopy(e) || to !== linkSource(e)) mat = 'WRONG-SOURCE';
       else if (e.type === 'git-track') {
         const dirty = git(repoDirFor(e.url), ['status', '--porcelain', '--', e.path]).trim();
         if (dirty) mat = 'LOCAL-EDITS';
       }
     } else if (state[e.id] && state[e.id].hash && hashTree(dest) !== state[e.id].hash) mat = 'LOCAL-EDITS';
+    else if (e.type === 'git-pinned' && state[e.id]?.rev !== e.commit) mat = 'STALE';
     if (e.type === 'app-bundled') { const v = appVersion(e); if (v && e.appVersion && v !== e.appVersion) mat += ` (app now v${v})`; }
     const tstat = [];
     for (const t of e.targets) {
       (declared[t] = declared[t] || new Set()).add(e.name);
       const dir = targetDir(lock, t);
+      if (skipTarget(dir)) continue;
       const p = path.join(dir, e.name);
       let s;
       try {
@@ -428,9 +461,10 @@ function cmdStatus() {
   for (const [t, spec] of Object.entries(lock.targets)) {
     if (typeof spec === 'object' && spec.partial) continue;
     const dir = targetDir(lock, t);
+    if (skipTarget(dir)) continue;
     const ignore = new Set((lock.ignore && lock.ignore[t]) || []);
     let names;
-    try { names = fs.readdirSync(dir); } catch (err) { console.log(`  ${t}: cannot read ${short(dir)} (${err.code})`); continue; }
+    try { names = fs.readdirSync(dir); } catch (err) { console.log(`  ${t}: cannot read ${short(dir)} (${err.code})`); problems++; continue; }
     for (const n of names.sort()) {
       if (n.startsWith('.') || ignore.has(n) || (declared[t] && declared[t].has(n))) continue;
       const p = path.join(dir, n);
@@ -445,6 +479,7 @@ function cmdStatus() {
   console.log('\nRULES');
   for (const r of lock.rules || []) {
     const t = expand(r.target);
+    if (skipTarget(t)) continue;
     const l = lstat(t);
     const want = path.join(REPO, r.source);
     const s = !l ? 'missing' : !l.isSymbolicLink() ? 'UNLINKED (real file; edits are not in git)' : fs.readlinkSync(t) === want ? 'ok' : 'WRONG-LINK';
@@ -541,14 +576,41 @@ function cmdAdd(args) {
   return 0;
 }
 
+function cmdSchedule() {
+  if (process.platform !== 'darwin') throw new Error('schedule requires macOS launchd');
+  if (REPO !== path.join(HOME, '.agent-config')) throw new Error('install the schedule from ~/.agent-config, not a worktree');
+  const label = 'com.sarthak.agent-config-sync';
+  const file = path.join(HOME, 'Library/LaunchAgents', `${label}.plist`);
+  const logFile = path.join(HOME, 'Library/Logs', `${label}.log`);
+  const job = {
+    Label: label,
+    ProgramArguments: [process.execPath, path.join(REPO, 'bin/agent-config'), 'sync', '--skip-desktop'],
+    StartInterval: 3600,
+    StandardOutPath: logFile,
+    StandardErrorPath: logFile,
+    EnvironmentVariables: { PATH: `${path.dirname(process.execPath)}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin` },
+  };
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.mkdirSync(path.dirname(logFile), { recursive: true });
+  const domain = `gui/${process.getuid()}`;
+  const loaded = run('launchctl', ['print', `${domain}/${label}`], { full: true, allowFail: true }).status === 0;
+  if (loaded) run('launchctl', ['bootout', `${domain}/${label}`]);
+  if (lstat(file)) backup(file);
+  run('plutil', ['-convert', 'xml1', '-o', file, '--', '-'], { input: JSON.stringify(job) });
+  run('launchctl', ['bootstrap', domain, file]);
+  log(`scheduled hourly sync and health check; Desktop targets are checked by manual sync. Log: ${short(logFile)}`);
+  return 0;
+}
+
 function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   for (const a of rest) if (a.startsWith('--')) FLAGS[a.slice(2)] = true;
-  const cmds = { sync: cmdSync, status: cmdStatus, bump: cmdBump, add: cmdAdd };
+  const cmds = { sync: cmdSync, status: cmdStatus, bump: cmdBump, add: cmdAdd, schedule: cmdSchedule };
   if (!cmds[cmd]) {
     console.log(`usage: agent-config <command>
   sync [name...] [--adopt] [--skip-desktop] [--quiet]   fetch sources, materialize skills, link targets and rules
   status                                                every target with source, SHA and drift; unmanaged skills
+  schedule                                              install hourly macOS sync, attribution and health check
   bump <name...|--all>                                  move git-pinned entries to the latest upstream commit
   add <name> --git <url> --path <sub> [--ref b] [--track] --targets a,b
   add <name> --local <dir> --targets a,b`);

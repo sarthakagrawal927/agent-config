@@ -1,6 +1,6 @@
 --- a/SKILL.md
 +++ b/SKILL.md
-@@ -1,149 +1,78 @@
+@@ -1,149 +1,79 @@
  ---
 -name: poteto-mode
 -description: poteto's agent style for concise, detailed responses, deliberate subagents, unslopped prose, simple code, and verified work. Use for poteto, /poteto-mode, or requests to work in this style.
@@ -51,7 +51,7 @@
 +| Cursor built-in create-skill | Use the installed `skill-creator` at `~/.codex/skills/.system/skill-creator/SKILL.md`. |
 +| `/setup-pstack` and `~/.cursor/rules/pstack-models.mdc` | Explain the Codex model choices and configure only if the owner requests it. Do not create Cursor rules or change Codex configuration during a trial. |
 +| cursor-team-kit `deslop`, `control-cli`, `control-ui` | Discover actual available skills/tools. Use existing diff review, shell execution, browser or native-control tools for the same observable check. Never invent a missing plugin/tool or claim its check ran. If a specific dependency is essential, report the gap and complete independent work. |
-+| Cursor plugins, hooks, agent files and slash-command registration | Bundled reference material only. Installing this entrypoint does not register Cursor agents/hooks or expose all leaf names as Codex slash commands. Use `$pstack` and read its routed leaf documents directly. |
++| Cursor plugins, hooks, agent files and slash-command registration | Codex can discover nested skills, but does not register Cursor agents or hooks. Every bundled skill has explicit-only Codex metadata. Prefer `$pstack` so this host adapter is loaded before a leaf playbook. |
  
 -- Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
 -- About to `AskQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. Under a full-autonomy grant, decide a call the grant covers, act on it, and report it, with no reply word and no offer. Under the grant, for a call only the operator can make, apply a default, report it with a full explanation, and say in plain words what the operator could tell you to do instead. The operator answers in their own words. Never give a shorthand token to type back. Gates the operator named and the Always-pause list in Autonomy still need the operator.
@@ -112,7 +112,8 @@
 -- **Build the Lever.** Any non-trivial work. Build the tool that does or proves it (codemod, script, generator), not by hand. The tool is the artifact a reviewer reruns.
 +Upstream is `cursor/plugins`, `pstack/`, pinned at the commit in frontmatter.
 +The root entrypoint is the Codex adaptation; bundled upstream files are
-+unmodified. See [MIT license](LICENSE) and [upstream manifest](upstream/plugin.json).
++preserved as text; explicit-only Codex policy files are generated beside each
++skill. See [MIT license](LICENSE) and [upstream manifest](upstream/plugin.json).
 +The existing skill manager owns installation and pin updates. Do not run an
 +upstream installer, auto-bump the pin or rewrite its patch during ordinary work.
  
