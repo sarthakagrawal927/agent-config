@@ -482,16 +482,6 @@
       ]
     },
     {
-      "name": "spacefast",
-      "type": "local",
-      "path": "skills/spacefast",
-      "targets": [
-        "agents",
-        "codex"
-      ],
-      "note": "Installed 2026-09-22 by the spacefast npm CLI (0.5.x, built from the private spacefast/monorepo) with an owner-edited description. The public spacefast/plugins repo ships a different, MCP-tool-based skill; this HTTP-API version matches no commit there."
-    },
-    {
       "name": "spacefast-account",
       "type": "local",
       "path": "skills/spacefast-account",
