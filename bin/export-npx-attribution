@@ -50,13 +50,12 @@ function gitAttribution(dir) {
 
 function attribution(skill, existing) {
   const entries = manifest.skills.filter((e) => e.name === skill.name);
-  // A prior npx install can differ from the manager's pin. Keep its real record.
-  if (existing?.source && !entries.some((e) => {
+  const e = entries.find((e) => {
     const materialized = path.join(home, '.local/share/agent-config/skills', e.id || e.name);
     return fs.existsSync(materialized) && fs.realpathSync(skill.path) === fs.realpathSync(materialized);
-  })) return existing;
-
-  const e = entries[0];
+  });
+  // A prior npx install can differ from the manager's pin. Keep its real record.
+  if (existing?.source && !e) return existing;
   const origin = e?.url;
   const source = origin ? origin.replace(/^https:\/\/github.com\//, '').replace(/\.git$/, '') :
     e?.type === 'local' ? path.join(repo, e.path) :

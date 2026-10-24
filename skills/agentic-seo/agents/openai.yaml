@@ -1,4 +1,0 @@
-interface:
-  display_name: "Agentic SEO"
-  short_description: "Run a measurable SEO content improvement cycle"
-  default_prompt: "Use $agentic-seo to check this product's readiness and complete the next evidence-backed content cycle."

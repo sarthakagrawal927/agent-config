@@ -82,3 +82,35 @@ test('scheduled attribution does not read archived Desktop targets', () => {
     assert.equal(spawnSync('/usr/bin/trash', [fixture]).status, 0);
   }
 });
+
+test('same-name variants are attributed to the physically installed source', () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'npx-attribution-variant-'));
+  try {
+    const repo = path.join(fixture, '.agent-config');
+    const agents = path.join(fixture, '.agents/skills');
+    const materialized = path.join(fixture, '.local/share/agent-config/skills');
+    fs.mkdirSync(agents, { recursive: true });
+    fs.mkdirSync(materialized, { recursive: true });
+    for (const id of ['first', 'second']) {
+      const source = path.join(repo, 'skills', id);
+      fs.mkdirSync(source, { recursive: true });
+      fs.writeFileSync(path.join(source, 'SKILL.md'), `---\nname: example\ndescription: ${id} source\n---\n`);
+      fs.symlinkSync(source, path.join(materialized, id));
+    }
+    fs.symlinkSync(path.join(materialized, 'second'), path.join(agents, 'example'));
+    fs.writeFileSync(path.join(repo, 'skills.lock.json'), JSON.stringify({
+      targets: { agents }, skills: ['first', 'second'].map((id) => ({
+        id, name: 'example', type: 'local', path: `skills/${id}`, targets: ['agents'],
+      })),
+    }));
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../bin/export-npx-attribution'), 'utf8'), {
+      __dirname: path.join(repo, 'bin'), console: { log() {} }, process: { argv: [] },
+      require(name) { return name === 'os' ? { homedir: () => fixture } : require(name); },
+    });
+    const entry = JSON.parse(fs.readFileSync(path.join(fixture, '.agents/.skill-lock.json'))).skills.example;
+    assert.equal(entry.source, path.join(repo, 'skills/second'));
+    assert.equal(entry.sourceUrl, path.join(repo, 'skills/second'));
+  } finally {
+    assert.equal(spawnSync('/usr/bin/trash', [fixture]).status, 0);
+  }
+});

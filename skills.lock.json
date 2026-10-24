@@ -675,14 +675,16 @@
     },
     {
       "name": "agentic-seo",
-      "type": "local",
-      "path": "skills/agentic-seo",
+      "type": "git-track",
+      "path": "tooling/skills/agentic-seo",
       "targets": [
         "agents",
         "claude",
         "codex"
       ],
-      "note": "Owner-specific SEO workflow; private Git-backed skill. Shared Fleet authoring checkout was blocked by the workspace disk budget on 2026-10-23."
+      "note": "Fleet-authored growth workflow; canonical source is SaaS Maker tooling. Private product state remains in Site Health.",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main"
     },
     {
       "name": "ai-listicle-outreach",
