@@ -786,6 +786,21 @@
         "claude"
       ],
       "note": "Emil Kowalski, MIT. Selected specialist guidance; Fleet design-workflow remains the design entry point."
+    },
+    {
+      "name": "code-video",
+      "type": "local",
+      "path": "skills/code-video",
+      "targets": [
+        "agents",
+        "claude",
+        "codex",
+        "cursor",
+        "devin",
+        "grok",
+        "openclaw"
+      ],
+      "note": "Combined code-rendered video skill (Clawd kit, Lemo-Opuscar, mg-styles-15, pdoom lyric sync, prompt libraries, archive.org). Vendored MIT parts keep their LICENSE; other sources are pinned in scripts/fetch.sh."
     }
   ]
 }

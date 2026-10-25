@@ -1,0 +1,9 @@
+{
+  "name": "code-video-harness",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic renderAt(t) page -> MP4 renderer, vendored from Vincentwei1021/mg-styles-15 (MIT)",
+  "dependencies": {
+    "puppeteer-core": "25.12.0"
+  }
+}
