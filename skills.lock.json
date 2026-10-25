@@ -713,8 +713,9 @@
         "agents",
         "codex"
       ],
-      "note": "PStack 0.15.30 by Lauren Tan (poteto). Codex adapter at the root; upstream text preserved under upstream, with generated explicit-only Codex invocation metadata beside every skill. No Cursor model rules or hooks installed.",
-      "codexExplicitOnly": true
+      "note": "PStack 0.15.30 by Lauren Tan (poteto). Codex adapter automatically selectable for substantial engineering tasks; bundled leaf skills stay explicit-only. Upstream text and MIT license preserved; no Cursor model rules or hooks installed.",
+      "codexExplicitOnly": true,
+      "codexImplicitRoot": true
     },
     {
       "name": "anatomy",

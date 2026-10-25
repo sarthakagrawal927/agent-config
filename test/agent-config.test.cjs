@@ -162,6 +162,45 @@ test('applies explicit-only policy to root and nested skills without losing meta
   assert.match(first, /allow_implicit_invocation: false/);
   f.api.applyCodexPolicy(f.upstream);
   assert.equal(fs.readFileSync(config, 'utf8'), first);
+  f.api.applyCodexPolicy(f.upstream, { implicitRoot: true });
+  assert.match(fs.readFileSync(path.join(f.upstream, 'agents/openai.yaml'), 'utf8'), /allow_implicit_invocation: true/);
+  assert.equal(fs.readFileSync(config, 'utf8'), first, 'nested invocation policy and provider metadata stay intact');
+});
+
+test('root automatic invocation survives sync, reports its policy and can be rolled back', (t) => {
+  const f = fixture(t);
+  const source = path.join(f.repo, 'skills/pack');
+  fs.mkdirSync(path.join(source, 'upstream/skills/leaf'), { recursive: true });
+  for (const file of ['SKILL.md', 'upstream/skills/leaf/SKILL.md']) fs.writeFileSync(path.join(source, file), f.content);
+  Object.assign(f.entry, { type: 'local', path: 'skills/pack', codexExplicitOnly: true });
+  f.save();
+  assert.equal(f.api.cmdSync(['example']), 0);
+  const installed = path.join(f.target, 'example');
+  const rootPolicy = path.join(installed, 'agents/openai.yaml');
+  const nestedPolicy = path.join(installed, 'upstream/skills/leaf/agents/openai.yaml');
+  assert.match(fs.readFileSync(rootPolicy, 'utf8'), /allow_implicit_invocation: false/);
+
+  f.entry.codexImplicitRoot = true;
+  f.save();
+  f.api.flags.json = true;
+  assert.equal(f.api.cmdStatus(), 1);
+  assert.equal(JSON.parse(f.messages.at(-1)).skills[0].status, 'STALE-RECIPE');
+  assert.equal(f.api.cmdSync(['example']), 0);
+  assert.match(fs.readFileSync(rootPolicy, 'utf8'), /allow_implicit_invocation: true/);
+  assert.match(fs.readFileSync(nestedPolicy, 'utf8'), /allow_implicit_invocation: false/);
+  const report = JSON.parse(f.messages.at(-1)).skills[0];
+  assert.equal(report.explicitOnly, false);
+  assert.equal(report.implicitRoot, true);
+  const first = fs.readFileSync(rootPolicy, 'utf8');
+  assert.equal(f.api.cmdSync(['example']), 0);
+  assert.equal(fs.readFileSync(rootPolicy, 'utf8'), first, 'repeated maintenance preserves the chosen policy');
+
+  delete f.entry.codexImplicitRoot;
+  f.save();
+  assert.equal(f.api.cmdStatus(), 1);
+  assert.equal(f.api.cmdSync(['example']), 0);
+  assert.match(fs.readFileSync(rootPolicy, 'utf8'), /allow_implicit_invocation: false/);
+  assert.match(fs.readFileSync(nestedPolicy, 'utf8'), /allow_implicit_invocation: false/);
 });
 
 test('skip-desktop also applies to attribution and health checks', (t) => {

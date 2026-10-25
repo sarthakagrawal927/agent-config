@@ -214,18 +214,20 @@ function applyOverrides(file, overrides) {
 }
 
 // ---------- materialization ----------
-function needsCopy(e) { return Boolean(e.overrides || e.patch || e.include || e.codexExplicitOnly); }
+function needsCopy(e) { return Boolean(e.overrides || e.patch || e.include || e.codexExplicitOnly || e.codexImplicitRoot); }
 
 function recipeHash(e) {
   return crypto.createHash('sha256').update(JSON.stringify([
     e.type, e.url || null, e.commit || e.branch || null, e.path, e.include || null,
     e.overrides || null, e.codexExplicitOnly || false,
+    ...(e.codexImplicitRoot ? [{ codexImplicitRoot: true }] : []),
     e.patch ? fs.readFileSync(path.join(REPO, e.patch), 'base64') : null,
   ])).digest('hex');
 }
 
-function applyCodexPolicy(staging) {
+function applyCodexPolicy(staging, { implicitRoot = false } = {}) {
   for (const file of walkFiles(staging).filter((f) => path.basename(f) === 'SKILL.md')) {
+    const implicit = implicitRoot && path.relative(staging, file) === 'SKILL.md';
     const config = path.join(path.dirname(file), 'agents/openai.yaml');
     let text = lstat(config) ? fs.readFileSync(config, 'utf8') : '';
     // Refuse unsupported YAML rather than replacing provider metadata.
@@ -240,10 +242,10 @@ function applyCodexPolicy(staging) {
       const key = lines.findIndex((line, i) => i > start && i < end && /^ +allow_implicit_invocation:/.test(line));
       const child = lines.slice(start + 1, end).find((line) => /^ +\S/.test(line));
       const indent = child?.match(/^ +/)[0] || '  ';
-      if (key >= 0) lines[key] = `${indent}allow_implicit_invocation: false`;
-      else lines.splice(start + 1, 0, `${indent}allow_implicit_invocation: false`);
+      if (key >= 0) lines[key] = `${indent}allow_implicit_invocation: ${implicit}`;
+      else lines.splice(start + 1, 0, `${indent}allow_implicit_invocation: ${implicit}`);
       text = lines.join('\n');
-    } else text = text.trimEnd() + (text.trim() ? '\n\n' : '') + 'policy:\n  allow_implicit_invocation: false\n';
+    } else text = text.trimEnd() + (text.trim() ? '\n\n' : '') + `policy:\n  allow_implicit_invocation: ${implicit}\n`;
     fs.mkdirSync(path.dirname(config), { recursive: true });
     fs.writeFileSync(config, text);
   }
@@ -273,7 +275,7 @@ function buildInto(e, staging) {
     if (r.status !== 0) throw new Error(`patch ${e.patch} did not apply: ${(r.stdout || '') + (r.stderr || '')}`.trim());
     for (const f of walkFiles(staging)) if (/\.orig$|\.rej$/.test(f)) trash(f);
   }
-  if (e.codexExplicitOnly) applyCodexPolicy(staging);
+  if (e.codexExplicitOnly || e.codexImplicitRoot) applyCodexPolicy(staging, { implicitRoot: Boolean(e.codexImplicitRoot) });
 }
 function walkFiles(dir) {
   const out = [];
@@ -488,7 +490,8 @@ function cmdStatus() {
     skills.push({ id: e.id, name: e.name, type: e.type, materializedPath: dest,
       physicalPath: fs.existsSync(dest) ? fs.realpathSync(dest) : dest,
       sourceURL: e.url || null, revision: e.commit || (e.type === 'git-track' ? git(repoDirFor(e.url), ['rev-parse', 'HEAD']).trim() : null),
-      sourcePath: e.path, patch: e.patch || null, explicitOnly: Boolean(e.codexExplicitOnly), status: mat, targets });
+      sourcePath: e.path, patch: e.patch || null, explicitOnly: Boolean(e.codexExplicitOnly && !e.codexImplicitRoot),
+      implicitRoot: Boolean(e.codexImplicitRoot), status: mat, targets });
   }
   const w = [0, 0, 0, 0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
   emit('SKILLS');

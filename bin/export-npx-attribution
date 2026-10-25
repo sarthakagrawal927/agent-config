@@ -73,6 +73,7 @@ function attribution(skill, existing) {
       ...(e.patch ? { patch: e.patch } : {}),
       ...(e.overrides ? { overrides: e.overrides } : {}),
       ...(e.codexExplicitOnly ? { codexExplicitOnly: true } : {}),
+      ...(e.codexImplicitRoot ? { codexImplicitRoot: true } : {}),
       ...(e.appVersion ? { appVersion: e.appVersion } : {}),
     } } : { attributionNote: 'Local installation; upstream revision is not recorded.',
       ...(gitAttribution(skill.path) || {}),

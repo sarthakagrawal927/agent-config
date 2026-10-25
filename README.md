@@ -24,8 +24,11 @@ account information outside it.
     local edits). These are applied to the materialized copy only, never to upstream.
   - `codexExplicitOnly: true`: generate Codex's supported
     `agents/openai.yaml` invocation policy beside every included `SKILL.md`,
-    including nested skills. Preserve other metadata. PStack is opt-in; its
-    nested entries remain discoverable. Prefer `$pstack` to load the host adapter.
+    including nested skills. Preserve other metadata. With
+    `codexImplicitRoot: true`, allow automatic selection of the root adapter
+    while keeping nested skills explicit-only. PStack uses this combination:
+    substantial engineering tasks can select its adapter; ordinary status,
+    small edits and prose stay on the light path. `$pstack` still works explicitly.
 - Targets are `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`, the Fleet
   folders `~/Desktop/fleet/.agents/skills` and `~/Desktop/fleet/.claude/skills`,
   existing OpenClaw, Cursor, Devin and Grok aliases, and registered archived

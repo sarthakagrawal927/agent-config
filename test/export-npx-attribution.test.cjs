@@ -101,6 +101,7 @@ test('same-name variants are attributed to the physically installed source', () 
     fs.writeFileSync(path.join(repo, 'skills.lock.json'), JSON.stringify({
       targets: { agents }, skills: ['first', 'second'].map((id) => ({
         id, name: 'example', type: 'local', path: `skills/${id}`, targets: ['agents'],
+        ...(id === 'second' ? { codexExplicitOnly: true, codexImplicitRoot: true } : {}),
       })),
     }));
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../bin/export-npx-attribution'), 'utf8'), {
@@ -110,6 +111,8 @@ test('same-name variants are attributed to the physically installed source', () 
     const entry = JSON.parse(fs.readFileSync(path.join(fixture, '.agents/.skill-lock.json'))).skills.example;
     assert.equal(entry.source, path.join(repo, 'skills/second'));
     assert.equal(entry.sourceUrl, path.join(repo, 'skills/second'));
+    assert.equal(entry.agentConfig.codexExplicitOnly, true);
+    assert.equal(entry.agentConfig.codexImplicitRoot, true);
   } finally {
     assert.equal(spawnSync('/usr/bin/trash', [fixture]).status, 0);
   }
