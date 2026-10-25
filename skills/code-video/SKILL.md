@@ -16,6 +16,12 @@ explainers, launch films and lyric videos. It is weak at photoreal people and li
 reviewed commits with `sh <skill>/scripts/fetch.sh <source>`. It prints `DIR=<path>`, and
 `fetch.sh list` shows every source.
 
+**Sandboxed agents** (for example Codex in `workspace-write`) have two limits. They can't
+write the shared cache, so set `CODE_VIDEO_HOME=<project>/.sources`. They also can't launch
+headless Chrome, because seatbelt blocks it. In that case write the code and run Python and
+ffmpeg inside the sandbox, but have the parent agent (or the user) run the Chrome renderers
+outside it.
+
 ## 1. Pick the route
 
 | The request | Route | Start here |
