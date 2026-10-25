@@ -16,9 +16,9 @@
     },
     "openclaw": "~/.openclaw/skills",
     "archive-email-manager": "~/Desktop/fleet-archive/email-manager/.agents/skills",
-    "archive-motion": "~/Desktop/fleet-archive/motion/.agents/skills",
+    "archive-motion": "~/Desktop/fleet/motion/.agents/skills",
     "archive-email-manager-claude": "~/Desktop/fleet-archive/email-manager/.claude/skills",
-    "archive-motion-claude": "~/Desktop/fleet-archive/motion/.claude/skills",
+    "archive-motion-claude": "~/Desktop/fleet/motion/.claude/skills",
     "grok": {
       "dir": "~/.grok/skills",
       "partial": true
