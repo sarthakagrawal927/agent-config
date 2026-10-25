@@ -69,14 +69,18 @@ repo `AGENTS.md` files add repo specifics. Backup of the previous version:
   Claude author -> configured Codex CLI. This local review is standing-authorized;
   do not ask again. Judge consequences, not diff size. Reviewers return findings
   without recursively launching another reviewer.
+  When `CODEVETTER_REVIEWER` is set, return review findings only; do not enter the
+  author workflow or clear the worker marker to launch another review.
 - Performance checks are additive when relevant. Use representative budgets and
   paired evidence for improvement claims; tests-plus-review uses the supported
-  `--skip-performance` path. SaaS Maker's checklist guides applicable product
+  `codevetter check --skip-performance` path. SaaS Maker's checklist guides applicable product
   acceptance, while CodeVetter owns execution and evidence.
 - Keep exact source/test evidence, resolve confirmed defects and report missing
   runtime/reviewer evidence plainly. Log actual CodeVetter invocations and their
   usefulness once; do not relabel ordinary tests as CodeVetter runs or claim
   productivity improvements from tool usage.
+  If a required skill, CLI capability or reviewer is unavailable, continue the
+  native checks that can run and report the gap; crucial verification is unfinished.
 
 ## Stack
 
