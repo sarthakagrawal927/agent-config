@@ -58,6 +58,30 @@ repo `AGENTS.md` files add repo specifics. Backup of the previous version:
   repo at a time. Use cheaper/faster models for mechanical work and the
   strongest model for judgment, design, and review.
 
+## Engineering with CodeVetter
+
+- CodeVetter owns verification, testing, code review and performance engineering
+  policy. For implementation or fixes, load `codevetter-engineering` from the
+  installed skills and follow its risk-based workflow. Repository test runners
+  remain authoritative; use the owner-managed skill when plugin copies coexist.
+- Small reversible changes get focused checks. Crucial workflows get automatic
+  independent review through CodeVetter: Codex author -> configured Claude CLI;
+  Claude author -> configured Codex CLI. This local review is standing-authorized;
+  do not ask again. Judge consequences, not diff size. Reviewers return findings
+  without recursively launching another reviewer.
+  When `CODEVETTER_REVIEWER` is set, return review findings only; do not enter the
+  author workflow or clear the worker marker to launch another review.
+- Performance checks are additive when relevant. Use representative budgets and
+  paired evidence for improvement claims; tests-plus-review uses the supported
+  `codevetter check --skip-performance` path. SaaS Maker's checklist guides applicable product
+  acceptance, while CodeVetter owns execution and evidence.
+- Keep exact source/test evidence, resolve confirmed defects and report missing
+  runtime/reviewer evidence plainly. Log actual CodeVetter invocations and their
+  usefulness once; do not relabel ordinary tests as CodeVetter runs or claim
+  productivity improvements from tool usage.
+  If a required skill, CLI capability or reviewer is unavailable, continue the
+  native checks that can run and report the gap; crucial verification is unfinished.
+
 ## Stack
 
 - Choose the strongest evidenced long-term fit for the product (capability,

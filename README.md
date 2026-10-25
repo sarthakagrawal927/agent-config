@@ -79,6 +79,15 @@ skills scoped, and experimental workflows opt-in. Avoid duplicate copies.
 To roll back an update, restore its manifest entry and patch from Git and sync;
 replaced installations are also retained in the dated backup directory.
 
+## CodeVetter engineering
+
+`codevetter-engineering` and its four specialist skills follow CodeVetter `main`
+and link to every registered agent target, including Gemini's existing skill
+directory. CodeVetter owns the workflow; the shared rules select focused checks
+for small changes, independent opposite-agent review for crucial changes, and
+measured performance work when relevant. Managed links establish availability;
+actual selection remains host behavior and existing sessions may need a reload.
+
 ## Held pins
 
 - **impeccable stays at skill 4.0.2** (`fc2e694`, tag `skill-v4.0.2`), matching

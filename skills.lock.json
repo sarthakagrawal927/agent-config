@@ -22,6 +22,10 @@
     "grok": {
       "dir": "~/.grok/skills",
       "partial": true
+    },
+    "gemini": {
+      "dir": "~/.gemini/skills",
+      "partial": true
     }
   },
   "ignore": {
@@ -543,13 +547,49 @@
       ]
     },
     {
+      "name": "codevetter-engineering",
+      "type": "git-track",
+      "url": "https://github.com/Codevetter/codevetter.git",
+      "branch": "main",
+      "path": "skills/codevetter-engineering",
+      "targets": [
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude",
+        "grok",
+        "gemini"
+      ]
+    },
+    {
       "name": "codevetter-evaluate",
       "type": "git-track",
       "url": "https://github.com/Codevetter/codevetter.git",
       "branch": "main",
       "path": "skills/codevetter-evaluate",
       "targets": [
-        "codex"
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude",
+        "grok",
+        "gemini"
       ]
     },
     {
@@ -559,7 +599,20 @@
       "branch": "main",
       "path": "skills/codevetter-performance",
       "targets": [
-        "codex"
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude",
+        "grok",
+        "gemini"
       ]
     },
     {
@@ -569,7 +622,20 @@
       "branch": "main",
       "path": "skills/codevetter-review",
       "targets": [
-        "codex"
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude",
+        "grok",
+        "gemini"
       ]
     },
     {
@@ -579,7 +645,20 @@
       "branch": "main",
       "path": "skills/codevetter-testing",
       "targets": [
-        "codex"
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "archive-email-manager",
+        "archive-motion",
+        "archive-email-manager-claude",
+        "archive-motion-claude",
+        "grok",
+        "gemini"
       ]
     },
     {
