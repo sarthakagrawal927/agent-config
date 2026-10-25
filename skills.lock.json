@@ -892,6 +892,25 @@
         "fleet-agents",
         "openclaw"
       ]
+    },
+    {
+      "name": "reverse-engineer-anything",
+      "type": "git-pinned",
+      "url": "https://github.com/morluto/rea.git",
+      "commit": "fc43e285eaae2155d32e2ca0ab5d2181a4e2f1b5",
+      "path": ".agents/skills/reverse-engineer-anything",
+      "targets": [
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "grok",
+        "gemini"
+      ]
     }
   ]
 }
