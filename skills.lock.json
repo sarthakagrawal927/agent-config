@@ -881,6 +881,17 @@
         "openclaw"
       ],
       "note": "Combined code-rendered video skill (Clawd kit, Lemo-Opuscar, mg-styles-15, pdoom lyric sync, prompt libraries, archive.org). Vendored MIT parts keep their LICENSE; other sources are pinned in scripts/fetch.sh."
+    },
+    {
+      "name": "distributed-brand-search",
+      "type": "git-track",
+      "url": "https://github.com/sass-maker/saas-maker.git",
+      "branch": "main",
+      "path": "tooling/skills/distributed-brand-search",
+      "targets": [
+        "fleet-agents",
+        "openclaw"
+      ]
     }
   ]
 }
