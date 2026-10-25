@@ -93,6 +93,14 @@ Open `harness/preview.html` to scrub. Contact sheet: `ffmpeg -i film/out/video.m
   films cost real money (a multi-minute MV can run to hundreds of dollars), so draft at
   `--scale 0.5` and render full resolution once.
 
+## Companion skills
+
+When they are installed, read them alongside this one: `animate` for every motion decision
+(curve, duration, interruption), `better-typography` for on-screen type, `better-ui` for any
+rebuilt product UI, and `design-workflow` for taste and the slop check on a product's own
+brand. For a website launch video in the Hyperframes pipeline, `brag` and `brag-slim` are the
+alternative route.
+
 ## Beyond this skill
 
 These need something other than code and local tools. Name them to the user rather than
