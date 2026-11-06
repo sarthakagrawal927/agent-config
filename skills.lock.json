@@ -911,6 +911,16 @@
         "grok",
         "gemini"
       ]
+    },
+    {
+      "name": "untangle-codebase",
+      "type": "local",
+      "path": "skills/untangle-codebase",
+      "targets": [
+        "agents",
+        "claude",
+        "codex"
+      ]
     }
   ]
 }
