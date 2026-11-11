@@ -24,7 +24,10 @@ runs an embedded producer. Only local Space creation, jobs, staged transfers,
 guest tools and deletion are exposed. No pools, host adoption or sharing tools.
 This constrains this MCP connection, not an agent's other unrestricted tools.
 
-Read the live schemas. Create one worker with `create_space`: `on=local`,
+Read the live schemas. For a referenced retained or still-running task-owned
+worker, verify its identity and readiness with `list_spaces` and continue there.
+Report an unavailable worker rather than replacing it silently. For new work,
+create one worker with `create_space`: `on=local`,
 `image=macos`, `kind=vm`, `runtime=lume`, `reuse=false`, `count=1`, `wait=false`.
 Set `FLEET_CUA_OWNER` to a stable unique agent/task name in the MCP configuration
 when reconnects are needed (Pace uses its own namespace). The guard reserves a unique worker name for that owner before delivery and
@@ -82,4 +85,9 @@ the guarded `delete_space` tool with its explicit `space` ID. Preserve a worker 
 or one containing unfinished work that has not been recovered, or when the
 workspace/app state itself is the requested deliverable; suspend it when
 appropriate. Never clean other workers or retained user data by age alone.
-Report the worker name and any remaining qualification gaps.
+Before creating a workspace intended for retention, configure a stable
+`FLEET_CUA_OWNER`; report that owner and the `local:<name>` ID so a later
+connection can recover it. If an already-created worker has only a connection
+owner, preserve it and provide the explicit `cua sb exec local:WORKER` route
+for authorized owner recovery instead of promising guarded MCP re-entry.
+For file deliverables, return each verified host path. Report remaining gaps.
