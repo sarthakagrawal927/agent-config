@@ -24,7 +24,8 @@ cua sb create macos --on local --kind vm --runtime lume \
   --cpu 4 --memory 8GB --wait desktop
 ```
 
-Record the returned `local:<name>` and use it throughout the task. Do not adopt,
+Record the task owner and returned `local:<name>` in the task's status and use
+that reference throughout the task. Do not adopt,
 operate or remove another agent's worker. One agent controls a given desktop
 at a time. macOS workers currently have a two-VM host limit; if both slots are
 occupied, continue independent work and wait for capacity. Do not evict another
@@ -35,6 +36,12 @@ worker or substitute the physical desktop.
 Prefer Cua MCP tools. Supply the explicit worker reference in the `sandbox`
 argument of every `computer_*` call; lifecycle tools take their documented
 `name` argument. Read the tool schema before using an unfamiliar action.
+
+Agent registrations use [scripts/cua-mcp](scripts/cua-mcp), a small entry point
+around the installed Cua CLI. It exposes image discovery, sandbox lifecycle and
+guest computer tools, with no default desktop target. It excludes the Spaces
+sharing, account-transfer and host-management tools. This is workflow routing,
+not an OS sandbox around an agent that also has unrestricted shell access.
 
 For shell work, use an explicit reference as well:
 

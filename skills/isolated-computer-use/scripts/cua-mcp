@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+# This is a restricted Cua entry point for agent MCP registrations.
+# The upstream connector uses either `mcp` or `daemon mcp`.
+mode=server
+if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
+    mode=version
+elif [ "$#" -eq 1 ] && [ "$1" = "mcp" ]; then
+    :
+elif [ "$#" -eq 2 ] && [ "$1" = "daemon" ] && [ "$2" = "mcp" ]; then
+    :
+else
+    printf '%s\n' 'Use this entry point with mcp, daemon mcp, or --version.' >&2
+    exit 64
+fi
+
+cua_bin=${FLEET_CUA_EXECUTABLE:-"$HOME/.local/bin/cua"}
+if [ ! -x "$cua_bin" ]; then
+    printf '%s\n' 'The installed Cua CLI is unavailable.' >&2
+    exit 69
+fi
+
+# Explicit flags override an inherited broader permission set. There is no
+# default desktop target: every computer call must name its worker.
+CUA_MCP_PERMISSIONS=images:readonly,sandbox:all,computer:all
+CUA_RUNTIME_LUME_VNC=disabled
+CUA_DEFAULT_ON=local
+DO_NOT_TRACK=1
+unset CUA_SANDBOX
+export CUA_MCP_PERMISSIONS CUA_RUNTIME_LUME_VNC CUA_DEFAULT_ON DO_NOT_TRACK
+
+if [ "$mode" = version ]; then
+    exec "$cua_bin" --version
+fi
+exec "$cua_bin" mcp --permissions "$CUA_MCP_PERMISSIONS"
