@@ -2,39 +2,75 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
+const { createInterface } = require('node:readline');
 const { test } = require('node:test');
 
 const entry = path.join(__dirname, '../skills/isolated-computer-use/scripts/cua-mcp');
 
-test('restricted entry point refuses host operations and extra server flags before launching Cua', () => {
+test('restricted entry point refuses host operations and extra flags before launch', () => {
   for (const args of [[], ['host', 'setup'], ['do', 'switch', 'host'],
     ['mcp', '--permissions', 'all'], ['daemon', 'mcp', '--sandbox', 'host']]) {
     const result = spawnSync('/bin/sh', [entry, ...args], {
       env: { ...process.env, FLEET_CUA_EXECUTABLE: '/does-not-exist' }, encoding: 'utf8',
     });
     assert.equal(result.status, 64);
-    assert.match(result.stderr, /Use this entry point/);
   }
 });
 
-test('both supported MCP registration forms start only the restricted guest tool groups', (t) => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'isolated-computer-use-'));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  const fake = path.join(dir, 'cua');
-  fs.writeFileSync(fake, `#!/bin/sh\nprintf '%s\\n' "$@" "permissions=$CUA_MCP_PERMISSIONS" "vnc=$CUA_RUNTIME_LUME_VNC" "tracking=$DO_NOT_TRACK" "target=\${CUA_SANDBOX-unset}" "location=$CUA_DEFAULT_ON"\n`);
-  fs.chmodSync(fake, 0o755);
-  for (const args of [['mcp'], ['daemon', 'mcp']]) {
-    const result = spawnSync('/bin/sh', [entry, ...args], {
+for (const mode of [['mcp'], ['daemon', 'mcp']]) {
+  test(`${mode.join(' ')} guards requests and clears inherited routing`, async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'isolated-computer-use-'));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const fake = path.join(dir, 'cua');
+    fs.writeFileSync(fake, `#!/usr/bin/env python3
+import json,os,sys
+for line in sys.stdin:
+ m=json.loads(line)
+ print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
+`);
+    fs.chmodSync(fake, 0o755);
+    const child = spawn('/bin/sh', [entry, ...mode], {
       env: { ...process.env, FLEET_CUA_EXECUTABLE: fake, CUA_MCP_PERMISSIONS: 'all',
-        CUA_SANDBOX: 'host', CUA_DEFAULT_ON: 'direct:unwanted-host' },
-      encoding: 'utf8',
+        CUA_SANDBOX: 'host', CUA_DAEMON: 'http://localhost:1', CUA_DAEMON_TOKEN: 'fixture',
+        CUA_DEFAULT_ON: 'direct:unwanted-host' },
+      stdio: ['pipe', 'pipe', 'inherit'],
     });
-    assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(result.stdout.trim().split('\n'), [
-      'mcp', '--permissions', 'images:readonly,sandbox:all,computer:all',
-      'permissions=images:readonly,sandbox:all,computer:all', 'vnc=disabled', 'tracking=1',
-      'target=unset', 'location=local',
-    ]);
-  }
-});
+    t.after(() => child.kill());
+    const lines = createInterface({ input: child.stdout })[Symbol.asyncIterator]();
+    let sequence = 0;
+    async function call(name, args) {
+      const id = ++sequence;
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
+        params: { name, arguments: args } }) + '\n');
+      const { value, done } = await lines.next();
+      assert.equal(done, false);
+      const response = JSON.parse(value);
+      assert.equal(response.id, id);
+      return response;
+    }
+    for (const space of ['host', 'worker', 'direct:127.0.0.1:7777', 'relay:owner', 'cloud:worker', '', 'local:../host']) {
+      assert.match((await call('call_tool', { space, tool: 'click' })).error.message, /local:/);
+    }
+    for (const name of ['add_space', 'share_space', 'sandbox_pool_create', 'computer_click']) {
+      assert.ok((await call(name, { space: 'local:worker' })).error);
+    }
+    const create = { on: 'local', image: 'macos', kind: 'vm', runtime: 'lume', reuse: false, count: 1, wait: false };
+    for (const overrides of [{ on: 'default' }, { on: 'host:owner' }, { reuse: true }, { count: 2 }, { volumes: ['/Users'] }]) {
+      assert.ok((await call('create_space', { ...create, ...overrides })).error);
+    }
+    const result = (await call('create_space', create)).result;
+    assert.deepEqual(result.received.params.arguments, create);
+    assert.deepEqual(result.argv.slice(0, 5), ['mcp', '--embedded', '--sandbox', '', '--permissions']);
+    assert.equal(result.env.CUA_SANDBOX, null);
+    assert.equal(result.env.CUA_DAEMON, null);
+    assert.equal(result.env.CUA_DAEMON_TOKEN, null);
+    assert.equal(result.env.CUA_DEFAULT_ON, 'local');
+    assert.equal(result.env.CUA_RUNTIME_LUME_VNC, 'disabled');
+    assert.equal(result.env.CUA_POOL_AUTO, 'off');
+    assert.ok(!result.env.CUA_MCP_PERMISSIONS.includes(':all'));
+    const guest = await call('call_tool', { space: 'local:worker-1', tool: 'get_ui_state', arguments: {} });
+    assert.equal(guest.result.received.params.arguments.space, 'local:worker-1');
+    child.stdin.end();
+  });
+}

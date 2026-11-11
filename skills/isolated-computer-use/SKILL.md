@@ -17,46 +17,29 @@ Use the installed `cua` CLI and its MCP server. Check `cua --version`,
 Fleet installation uses Cua 0.16.0 and its built-in Lume 0.7.0; consult current
 help when the installed version differs. Local workers require no Cua account.
 
-Create a worker for this task, with a generated or unique name:
+Use [scripts/cua-mcp](scripts/cua-mcp) as the MCP command with argument `mcp`.
+It requires Python 3 and the installed Cua CLI. Its guard refuses direct, relay,
+cloud, bare-name and host targets, clears inherited daemon/default targets, and
+runs an embedded producer. Only local Space creation, jobs, selected transfers,
+guest tools and deletion are exposed. No pools, host adoption or sharing tools.
+This constrains this MCP connection, not an agent's other unrestricted tools.
 
-```sh
-cua sb create macos --on local --kind vm --runtime lume \
-  --cpu 4 --memory 8GB --wait desktop
-```
+Read the live schemas. Create one worker with `create_space`: `on=local`,
+`image=macos`, `kind=vm`, `runtime=lume`, `reuse=false`, `count=1`, `wait=false`.
+Record its returned `local:<name>` and task owner. Use `list_spaces` to establish
+readiness. Address every subsequent call with that explicit `space` ID. Never
+adopt, operate or remove another task's worker. A Mac supports at most two macOS
+VMs; wait for capacity instead of evicting another worker or using the host.
 
-Record the task owner and returned `local:<name>` in the task's status and use
-that reference throughout the task. Do not adopt,
-operate or remove another agent's worker. One agent controls a given desktop
-at a time. macOS workers currently have a two-VM host limit; if both slots are
-occupied, continue independent work and wait for capacity. Do not evict another
-worker or substitute the physical desktop.
+Use `space_job` for long commands; retain job IDs and incremental log offsets.
+Discover guest tools with `list_tools`, then invoke them through `call_tool`.
+A starting job is not a passing test. Inspect existing state after uncertain
+responses before retrying. Preserve active workers so disconnected work resumes.
 
-## Address every action
-
-Prefer Cua MCP tools. Supply the explicit worker reference in the `sandbox`
-argument of every `computer_*` call; lifecycle tools take their documented
-`name` argument. Read the tool schema before using an unfamiliar action.
-
-Agent registrations use [scripts/cua-mcp](scripts/cua-mcp), a small entry point
-around the installed Cua CLI. It exposes image discovery, sandbox lifecycle and
-guest computer tools, with no default desktop target. It excludes the Spaces
-sharing, account-transfer and host-management tools. This is workflow routing,
-not an OS sandbox around an agent that also has unrestricted shell access.
-
-For shell work, use an explicit reference as well:
-
-```sh
-cua sb exec local:WORKER -- uname -a
-cua sb cp ./selected-source.tar local:WORKER:/tmp/selected-source.tar
-cua sb screenshot local:WORKER
-```
-
-Avoid `cua do switch` / `cua do` for concurrent agents: their selected target
-and screenshot coordinate state are shared in `~/.cua/do_target.json`.
-If an agent has no MCP integration, discover the worker's declared MCP service
-and use `cua sb mcp NAME SERVICE tools` / `call` with an explicit worker. If
-that route is unavailable, retain the shell checks and report GUI control as
-unavailable; do not replace it with host input.
+Agents without MCP can use explicit `cua sb exec local:WORKER -- <command>` and
+selected file transfers. Read current help first. Avoid `cua do switch` / `cua do`:
+their selected target and screenshot state are shared between agents. If GUI
+control is unavailable, report that gap rather than using the owner's desktop.
 
 Keep host home directories, browser profiles, personal app data and credentials
 out of workers. Transfer only the source, fixtures and artifacts needed for the
@@ -82,7 +65,7 @@ integration checks remain distinct and require the owner's applicable scope.
 ## Finish
 
 Collect the requested results before removing the task's disposable worker with
-`cua sb rm local:WORKER --force`. Preserve a worker the owner asked to retain,
+the guarded `delete_space` tool with its explicit `space` ID. Preserve a worker the owner asked to retain,
 or one containing unfinished work that has not been recovered; suspend it when
 appropriate. Never clean other workers or retained user data by age alone.
 Report the worker name and any remaining qualification gaps.
