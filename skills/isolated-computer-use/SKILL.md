@@ -46,9 +46,9 @@ their selected target and screenshot state are shared between agents. If GUI
 control is unavailable, report that gap rather than using the owner's desktop.
 
 Keep host home directories, browser profiles, personal app data and credentials
-out of workers. Stage only the source and fixtures needed for the authorized task under
+out of workers. Stage only selected files or sanitized source archives needed for the task under
 `~/Library/Application Support/Pace/testing/inputs/<task>/`. The guard refuses
-other upload roots, including symlink escapes. Downloads must remain under
+other upload roots and folder uploads; it resolves the selected file path before forwarding. Downloads must remain under
 `~/Library/Application Support/Pace/testing/results/`; the guard supplies a
 worker subfolder when no destination is provided. Do not migrate sign-ins, expose a host service, share a worker
 or publish a preview without the owner's request. Keep SIP and host permissions

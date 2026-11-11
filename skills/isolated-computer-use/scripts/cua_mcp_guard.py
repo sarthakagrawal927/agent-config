@@ -26,14 +26,17 @@ OWNER = os.environ.get("FLEET_CUA_OWNER", "connection-" + uuid.uuid4().hex)
 STATE = Path.home()/".local/share/isolated-computer-use"/(OWNER + ".json")
 
 
-def ownership(space=None):
+def ownership(space=None, remove=None):
     """Per-owner persistent receipts permit reconnects without adopting arbitrary VMs."""
     STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with STATE.with_suffix(".lock").open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         known = set(json.loads(STATE.read_text())) if STATE.exists() else set()
-        if space:
-            known.add(space)
+        if space or remove:
+            if space:
+                known.add(space)
+            if remove:
+                known.discard(remove)
             fd, temporary = tempfile.mkstemp(dir=STATE.parent)
             with os.fdopen(fd, "w") as handle:
                 json.dump(sorted(known), handle)
@@ -46,6 +49,8 @@ def within(path, root):
 
 
 def rejection(message):
+    if type(message.get("id")) not in (str, int, type(None)):
+        return "Malformed MCP request id"
     if message.get("method") != "tools/call":
         # Discovery and protocol lifecycle only, never arbitrary extensions.
         if message.get("method") in ("initialize", "ping", "tools/list",
@@ -78,6 +83,8 @@ def rejection(message):
             if not within(args.get("path"), INPUTS):
                 return "Stage selected source under " + str(INPUTS)
             args["path"] = str(Path(args["path"]).expanduser().resolve())
+            if not Path(args["path"]).is_file():
+                return "Upload one staged file or sanitized archive, not a folder"
         if name == "download":
             destination = args.get("dest", str(RESULTS / args["space"][6:]))
             if not within(destination, RESULTS):
@@ -103,12 +110,13 @@ def main():
         env.pop(key, None)
     env.update(CUA_MCP_PERMISSIONS=PERMISSIONS, CUA_DEFAULT_ON="local",
                CUA_RUNTIME_LUME_VNC="disabled", CUA_POOL_AUTO="off", DO_NOT_TRACK="1")
+    ownership()  # Fail before provisioning if the persisted receipt is unreadable.
     child = subprocess.Popen([env.get("FLEET_CUA_EXECUTABLE", str(Path.home()/".local/bin/cua")),
                               "mcp", "--embedded", "--sandbox", "", "--permissions", PERMISSIONS],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              text=True, bufsize=1, env=env)
     lock = threading.Lock()
-    pending = set()
+    pending = {}
 
     def emit(line):
         with lock:
@@ -116,25 +124,37 @@ def main():
             sys.stdout.flush()
 
     def output():
-        for line in child.stdout:
-            response = json.loads(line)
-            if response.get("id") in pending:
-                pending.discard(response["id"])
-                result = response.get("result", {})
-                if not result.get("isError"):
-                    candidates = [result.get("structuredContent", {})]
-                    for block in result.get("content", []):
-                        if block.get("type") == "text":
-                            try:
-                                candidates.append(json.loads(block["text"]))
-                            except (ValueError, KeyError):
-                                pass
-                    for candidate in candidates:
-                        if isinstance(candidate, dict) and re.fullmatch(
-                                r"local:[A-Za-z0-9][A-Za-z0-9_.-]*", str(candidate.get("id", ""))):
-                            ownership(candidate["id"])
-            emit(line)
-        # End the connection when its producer disappears; no silent restart/replay.
+        try:
+            for line in child.stdout:
+                response = json.loads(line)
+                request_id = response.get("id")
+                operation = pending.pop(request_id, None)
+                if operation:
+                    name, space = operation
+                    result = response.get("result", {})
+                    if not response.get("error") and not result.get("isError"):
+                        if name == "delete_space":
+                            ownership(remove=space)
+                        else:
+                            candidates = [result.get("structuredContent", {})]
+                            for block in result.get("content", []):
+                                if block.get("type") == "text":
+                                    try:
+                                        candidates.append(json.loads(block["text"]))
+                                    except (ValueError, KeyError):
+                                        pass
+                            created = [c["id"] for c in candidates if isinstance(c, dict)
+                                       and re.fullmatch(r"local:[A-Za-z0-9][A-Za-z0-9_.-]*", str(c.get("id", "")))]
+                            if not created:
+                                raise ValueError("Creation returned no local worker id; inspect retained workers")
+                            for space in created:
+                                ownership(space)
+                emit(line)
+        except Exception as error:
+            print("Cua MCP producer or ownership receipt failed: " + str(error), file=sys.stderr, flush=True)
+            child.terminate()
+            child.wait()
+            os._exit(70)
         os._exit(child.wait())
 
     threading.Thread(target=output, daemon=True).start()
@@ -152,15 +172,16 @@ def main():
                     emit(json.dumps({"jsonrpc": "2.0", "id": message["id"], "error": {
                         "code": -32602, "message": error}}) + "\n")
             else:
-                if message.get("method") == "tools/call" and message["params"]["name"] == "create_space":
-                    pending.add(message.get("id"))
+                if message.get("method") == "tools/call" and message["params"]["name"] in ("create_space", "delete_space"):
+                    pending[message.get("id")] = (message["params"]["name"], message["params"]["arguments"].get("space"))
                 child.stdin.write(json.dumps(message) + "\n")
                 child.stdin.flush()
     finally:
-        child.terminate()
+        child.stdin.close()
         try:
             child.wait(timeout=5)
         except subprocess.TimeoutExpired:
+            child.terminate()
             child.kill()
             child.wait()
 

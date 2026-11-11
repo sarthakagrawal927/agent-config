@@ -83,12 +83,15 @@ for line in sys.stdin:
     fs.mkdirSync(inputs, { recursive: true });
     fs.symlinkSync(dir, path.join(inputs, 'escape'));
     assert.ok((await call('send_file', { space: 'local:worker-1', path: path.join(inputs, 'escape/.ssh') })).error);
+    fs.writeFileSync(path.join(inputs, 'source.tar'), 'fixture source');
     const upload = await call('send_file', { space: 'local:worker-1', path: path.join(inputs, 'source.tar') });
     assert.equal(upload.result.received.params.arguments.path, path.join(fs.realpathSync(inputs), 'source.tar'));
     const download = await call('download', { space: 'local:worker-1', path: '/tmp/report.md' });
     assert.ok(download.result.received.params.arguments.dest.endsWith('/Pace/testing/results/worker-1'));
     const guest = await call('call_tool' , { space: 'local:worker-1', tool: 'get_ui_state', arguments: {} });
     assert.equal(guest.result.received.params.arguments.space, 'local:worker-1');
+    await call('delete_space', { space: 'local:worker-1' });
+    assert.ok((await call('call_tool', { space: 'local:worker-1', tool: 'click' })).error);
     child.stdin.end();
   });
 }
