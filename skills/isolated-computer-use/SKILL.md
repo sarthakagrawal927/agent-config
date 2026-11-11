@@ -25,12 +25,15 @@ guest tools and deletion are exposed. No pools, host adoption or sharing tools.
 This constrains this MCP connection, not an agent's other unrestricted tools.
 
 Read the live schemas. For a referenced retained or still-running task-owned
-worker, verify its identity and readiness with `list_spaces` and continue there.
+worker, use the same `FLEET_CUA_OWNER` that created it. Check readiness with
+`list_spaces`; visibility alone is not ownership. Continue only if the guard
+accepts that owner, otherwise report it unavailable and use the confirmed
+task-owned CLI recovery route described below.
 Report an unavailable worker rather than replacing it silently. For new work,
 create one worker with `create_space`: `on=local`,
 `image=macos`, `kind=vm`, `runtime=lume`, `reuse=false`, `count=1`, `wait=false`.
 Set `FLEET_CUA_OWNER` to a stable unique agent/task name in the MCP configuration
-when reconnects are needed (Pace uses its own namespace). The guard reserves a unique worker name for that owner before delivery and
+before creation when reconnects or retention may be needed (Pace uses its own namespace). The guard reserves a unique worker name for that owner before delivery and
 refuses other local workers. Uncertain provisioning attempts remain recorded
 for recovery; remove only confirmed task-owned workers. Without that
 setting, ownership lasts for this connection. Record its returned `local:<name>`
