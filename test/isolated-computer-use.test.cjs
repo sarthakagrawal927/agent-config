@@ -67,7 +67,9 @@ for line in sys.stdin:
       assert.ok((await call('create_space', { ...create, ...overrides })).error);
     }
     const result = (await call('create_space', create)).result;
-    assert.deepEqual(result.received.params.arguments, create);
+    const { name, ...forwarded } = result.received.params.arguments;
+    assert.match(name, /^fleet-connection-[a-f0-9-]+$/);
+    assert.deepEqual(forwarded, create);
     assert.deepEqual(result.argv.slice(0, 5), ['mcp', '--embedded', '--sandbox', '', '--permissions']);
     assert.equal(result.env.CUA_SANDBOX, null);
     assert.equal(result.env.CUA_DAEMON, null);

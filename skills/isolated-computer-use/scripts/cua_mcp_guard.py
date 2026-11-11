@@ -73,6 +73,8 @@ def rejection(message):
         allowed = set(required) | {"labels"}
         if set(args) - allowed:
             return "Unsupported VM creation option"
+        # Names never collide with a later friendly-name worker after an interrupted create.
+        args["name"] = "fleet-" + OWNER[:24] + "-" + uuid.uuid4().hex
     elif name != "list_spaces":
         if not isinstance(args.get("space"), str) or not re.fullmatch(
                 r"local:[A-Za-z0-9][A-Za-z0-9_.-]*", args["space"]):
