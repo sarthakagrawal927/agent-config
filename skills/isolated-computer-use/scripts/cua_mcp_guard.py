@@ -140,7 +140,7 @@ def main():
                     if not response.get("error") and not result.get("isError"):
                         if name == "delete_space":
                             ownership(remove=space)
-                        else:
+                        elif name == "create_space":
                             candidates = [result.get("structuredContent", {})]
                             for block in result.get("content", []):
                                 if block.get("type") == "text":
@@ -158,7 +158,11 @@ def main():
         except Exception as error:
             print("Cua MCP producer or ownership receipt failed: " + str(error), file=sys.stderr, flush=True)
             child.terminate()
-            child.wait()
+            try:
+                child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait()
             os._exit(70)
         code = child.wait()
         os._exit(code or (70 if pending else 0))
@@ -179,23 +183,32 @@ def main():
                     emit(json.dumps({"jsonrpc": "2.0", "id": message["id"], "error": {
                         "code": -32602, "message": error}}) + "\n")
             else:
-                if message.get("method") == "tools/call" and message["params"]["name"] in ("create_space", "delete_space"):
+                if message.get("method") == "tools/call" and message["params"]["name"] in TOOLS:
                     operation = message["params"]["name"]
                     space = message["params"]["arguments"].get("space")
                     if operation == "create_space":
                         space = "local:" + message["params"]["arguments"]["name"]
                         ownership(space)  # Reserve before delivery, including uncertain replies.
                     pending[message["id"]] = (operation, space)
+                if message.get("method") == "notifications/cancelled":
+                    params = message.get("params")
+                    request_id = params.get("requestId") if isinstance(params, dict) else None
+                    if type(request_id) in (str, int):
+                        pending.pop(request_id, None)
                 child.stdin.write(json.dumps(message) + "\n")
                 child.stdin.flush()
     finally:
         deadline = time.monotonic() + 30
-        while pending and child.poll() is None and time.monotonic() < deadline:
+        while pending and time.monotonic() < deadline:
             time.sleep(0.01)
         if pending:
             print("MCP drain timed out; owned workers retained: " + repr(list(pending.values())), file=sys.stderr, flush=True)
             child.terminate()
-            child.wait(timeout=5)
+            try:
+                child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait()
             raise SystemExit(70)
         child.stdin.close()
         reader.join(timeout=5)
