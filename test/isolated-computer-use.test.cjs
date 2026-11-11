@@ -80,6 +80,8 @@ for line in sys.stdin:
     const { name, ...forwarded } = result.received.params.arguments;
     assert.match(name, /^fleet-connection-[a-f0-9-]+$/);
     assert.deepEqual(forwarded, create);
+    child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: result.received.id, method: 'ping' }) + '\n');
+    assert.match(JSON.parse((await lines.next()).value).error.message, /already used/);
     assert.deepEqual(result.argv.slice(0, 5), ['mcp', '--embedded', '--sandbox', '', '--permissions']);
     assert.equal(result.env.CUA_SANDBOX, null);
     assert.equal(result.env.CUA_DAEMON, null);
@@ -112,9 +114,9 @@ for line in sys.stdin:
         params: { name: 'delete_space', arguments: { space: 'local:' + created, fixture_slow: true } } }) + '\n');
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
         params: { name: 'list_spaces', arguments: {} } }) + '\n');
-      assert.match(JSON.parse((await lines.next()).value).error.message, /already pending/);
+      assert.match(JSON.parse((await lines.next()).value).error.message, /already used/);
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'ping' }) + '\n');
-      assert.match(JSON.parse((await lines.next()).value).error.message, /already pending/);
+      assert.match(JSON.parse((await lines.next()).value).error.message, /already used/);
       const exited = once(child, 'exit');
       child.stdin.end();
       assert.equal(JSON.parse((await lines.next()).value).id, id);

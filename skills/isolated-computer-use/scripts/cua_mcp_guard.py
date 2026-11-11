@@ -123,6 +123,7 @@ def main():
     lock = threading.Lock()
     pending = {}
     server_requests = set()
+    used_client_ids = set()
 
     def emit(line):
         with lock:
@@ -188,8 +189,8 @@ def main():
                         error = "Unsolicited MCP response"
                 else:
                     error = rejection(message)
-                    if not error and "id" in message and message["id"] in pending:
-                        error = "A request with that id is already pending"
+                    if not error and "id" in message and message["id"] in used_client_ids:
+                        error = "A request with that id was already used in this session"
             except (ValueError, TypeError):
                 message, error = {}, "Malformed MCP request"
             if error:
@@ -198,10 +199,11 @@ def main():
                         "code": -32602, "message": error}}) + "\n")
             else:
                 if "method" in message and type(message.get("id")) in (str, int):
+                    used_client_ids.add(message["id"])
                     operation, space = "protocol", None
                     if message["method"] == "tools/call":
                         operation = message["params"]["name"]
-                        space = message["params"]["arguments"].get("space")
+                        space = message["params"].get("arguments", {}).get("space")
                         if operation == "create_space":
                             space = "local:" + message["params"]["arguments"]["name"]
                             ownership(space)
