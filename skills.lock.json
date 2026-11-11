@@ -26,6 +26,10 @@
     "gemini": {
       "dir": "~/.gemini/skills",
       "partial": true
+    },
+    "antigravity": {
+      "dir": "~/.gemini/config/skills",
+      "partial": true
     }
   },
   "ignore": {
@@ -910,6 +914,34 @@
         "openclaw",
         "grok",
         "gemini"
+      ]
+    },
+    {
+      "name": "untangle-codebase",
+      "type": "local",
+      "path": "skills/untangle-codebase",
+      "targets": [
+        "agents",
+        "claude",
+        "codex"
+      ]
+    },
+    {
+      "name": "isolated-computer-use",
+      "type": "local",
+      "path": "skills/isolated-computer-use",
+      "targets": [
+        "agents",
+        "claude",
+        "codex",
+        "fleet-agents",
+        "fleet-claude",
+        "devin",
+        "cursor",
+        "openclaw",
+        "grok",
+        "gemini",
+        "antigravity"
       ]
     }
   ]

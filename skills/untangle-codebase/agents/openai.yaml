@@ -1,0 +1,4 @@
+interface:
+  display_name: "Untangle Codebase"
+  short_description: "Bounded refactoring with behavior checks"
+  default_prompt: "Use $untangle-codebase to simplify this subsystem while preserving its behavior."

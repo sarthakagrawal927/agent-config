@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+case "$*" in
+    mcp|"daemon mcp") exec /usr/bin/env python3 "$(dirname "$0")/cua_mcp_guard.py" ;;
+    --version) exec "${FLEET_CUA_EXECUTABLE:-$HOME/.local/bin/cua}" --version ;;
+    *) printf '%s\n' 'Use this entry point with mcp, daemon mcp, or --version.' >&2; exit 64 ;;
+esac
