@@ -122,6 +122,7 @@ def main():
                              text=True, bufsize=1, env=env)
     lock = threading.Lock()
     pending = {}
+    server_requests = set()
 
     def emit(line):
         with lock:
@@ -133,6 +134,8 @@ def main():
             for line in child.stdout:
                 response = json.loads(line)
                 request_id = response.get("id")
+                if "method" in response and type(request_id) in (str, int):
+                    server_requests.add(request_id)
                 operation = pending.pop(request_id, None) if "method" not in response else None
                 if operation:
                     name, space = operation
@@ -175,22 +178,33 @@ def main():
                 message = json.loads(line, object_pairs_hook=unique_keys)
                 if not isinstance(message, dict):
                     raise ValueError("Expected an MCP object")
-                error = rejection(message)
-                if not error and message.get("method") == "tools/call" and message["id"] in pending:
-                    error = "A request with that id is already pending"
+                is_response = "method" not in message
+                if is_response:
+                    request_id = message.get("id")
+                    if type(request_id) in (str, int) and request_id in server_requests:
+                        server_requests.remove(request_id)
+                        error = None
+                    else:
+                        error = "Unsolicited MCP response"
+                else:
+                    error = rejection(message)
+                    if not error and "id" in message and message["id"] in pending:
+                        error = "A request with that id is already pending"
             except (ValueError, TypeError):
                 message, error = {}, "Malformed MCP request"
             if error:
-                if "id" in message:
+                if "id" in message and "method" in message:
                     emit(json.dumps({"jsonrpc": "2.0", "id": message["id"], "error": {
                         "code": -32602, "message": error}}) + "\n")
             else:
-                if message.get("method") == "tools/call" and message["params"]["name"] in TOOLS:
-                    operation = message["params"]["name"]
-                    space = message["params"]["arguments"].get("space")
-                    if operation == "create_space":
-                        space = "local:" + message["params"]["arguments"]["name"]
-                        ownership(space)  # Reserve before delivery, including uncertain replies.
+                if "method" in message and type(message.get("id")) in (str, int):
+                    operation, space = "protocol", None
+                    if message["method"] == "tools/call":
+                        operation = message["params"]["name"]
+                        space = message["params"]["arguments"].get("space")
+                        if operation == "create_space":
+                            space = "local:" + message["params"]["arguments"]["name"]
+                            ownership(space)
                     pending[message["id"]] = (operation, space)
                 if message.get("method") == "notifications/cancelled":
                     params = message.get("params")

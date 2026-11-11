@@ -26,11 +26,13 @@ for (const mode of [['mcp'], ['daemon', 'mcp']]) {
     const fake = path.join(dir, 'cua');
     fs.writeFileSync(fake, `#!/usr/bin/env python3
 import json,os,sys,time
+replies=0
 for line in sys.stdin:
  m=json.loads(line)
+ if 'method' not in m:replies+=1;continue
  if m.get('params',{}).get('arguments',{}).get('fixture_slow'):time.sleep(6)
  if m.get('params',{}).get('name')=='create_space':print(json.dumps({'jsonrpc':'2.0','id':m['id'],'method':'ping'}),flush=True)
- print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'structuredContent':{'id':'local:'+m['params']['arguments']['name']} if m.get('params',{}).get('name')=='create_space' else {},'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
+ print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'structuredContent':{'id':'local:'+m['params']['arguments']['name']} if m.get('params',{}).get('name')=='create_space' else {},'serverReplies':replies,'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
 `);
     fs.chmodSync(fake, 0o755);
     const child = spawn('/bin/sh', [entry, ...mode], {
@@ -47,7 +49,11 @@ for line in sys.stdin:
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
         params: { name, arguments: args } }) + '\n');
       let next = await lines.next();
-      while (!next.done && JSON.parse(next.value).method) next = await lines.next();
+      while (!next.done && JSON.parse(next.value).method) {
+        const request = JSON.parse(next.value);
+        child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: request.id, result: {} }) + '\n');
+        next = await lines.next();
+      }
       assert.equal(next.done, false);
       const response = JSON.parse(next.value);
       assert.equal(response.id, id);
@@ -96,6 +102,7 @@ for line in sys.stdin:
     assert.ok(download.result.received.params.arguments.dest.endsWith('/Pace/testing/results/' + name));
     const guest = await call('call_tool' , { space: 'local:' + name, tool: 'get_ui_state', arguments: {} });
     assert.equal(guest.result.received.params.arguments.space, 'local:' + name);
+    assert.ok(guest.result.serverReplies > 0);
     await call('delete_space', { space: 'local:' + name });
     assert.ok((await call('call_tool', { space: 'local:' + name, tool: 'click' })).error);
     if (mode.length === 1) {
@@ -105,6 +112,8 @@ for line in sys.stdin:
         params: { name: 'delete_space', arguments: { space: 'local:' + created, fixture_slow: true } } }) + '\n');
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
         params: { name: 'list_spaces', arguments: {} } }) + '\n');
+      assert.match(JSON.parse((await lines.next()).value).error.message, /already pending/);
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'ping' }) + '\n');
       assert.match(JSON.parse((await lines.next()).value).error.message, /already pending/);
       const exited = once(child, 'exit');
       child.stdin.end();
