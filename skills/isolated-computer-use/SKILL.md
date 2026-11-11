@@ -1,6 +1,6 @@
 ---
 name: isolated-computer-use
-description: Use Cua macOS VMs for native desktop automation and app GUI testing without taking over the owner's screen, cursor or keyboard. Apply when an agent would otherwise activate, click or type into host apps, or when isolated desktop testing is requested. Ordinary CLI, API and browser DOM automation do not need a VM.
+description: Use Cua macOS VMs to get work done through desktop apps, browsers, files, and guest commands without taking over the owner's screen, cursor or keyboard. Apply when an agent would otherwise activate, click or type into host apps, or when work in a separate computer is requested. Testing is one optional use. Ordinary CLI, API and browser DOM automation do not need a VM.
 ---
 
 # Isolated computer use
@@ -38,7 +38,7 @@ VMs; wait for capacity instead of evicting another worker or using the host.
 
 Use `space_job` for long commands; retain job IDs and incremental log offsets.
 Discover guest tools with `list_tools`, then invoke them through `call_tool`.
-A starting job is not a passing test. Inspect existing state after uncertain
+A starting job is not a completed task. Inspect existing state after uncertain
 responses before retrying. Preserve active workers so disconnected work resumes.
 
 Agents without MCP can use explicit `cua sb exec local:WORKER -- <command>` and
@@ -57,23 +57,29 @@ intact. Guest permissions are separate from host permissions.
 
 ## Verify the result
 
-Use the repository's build/test workflow inside the guest, including
-XcodeBuildMCP where required. Bind the tested source revision and worker.
-Build success, packaged startup and GUI behavior are separate checks.
+Let the user's goal define success. For document or file work, inspect the
+finished content or conversion and return the usable deliverable. For research,
+return the requested findings with sources. For app tasks, verify app-owned saved
+state or the requested action's effect. Use repository build/test workflows,
+including XcodeBuildMCP where required, only for software work. Bind source
+identity and executed test counts when applicable; do not demand a test suite
+for unrelated tasks.
 
 Read the guest's UI state before acting and inspect fresh state afterward.
 Verify typed text, navigation or saved output in app-owned state. A tool's
 successful return alone does not prove the requested effect. After a timeout
 or uncertain delivery, inspect first; do not repeat a possibly delivered action.
 
-Report the actual workload and duration tested. A short check does not establish
+Report what was accomplished, the requested deliverables, and any unfinished work.
+Include the actual workload and duration when they matter. A short check does not establish
 24/7 reliability, physical-device parity or every app's behavior. Host-only
 integration checks remain distinct and require the owner's applicable scope.
 
 ## Finish
 
-Collect the requested results before removing the task's disposable worker with
+Collect and verify the requested deliverables before removing the task's disposable worker with
 the guarded `delete_space` tool with its explicit `space` ID. Preserve a worker the owner asked to retain,
-or one containing unfinished work that has not been recovered; suspend it when
+or one containing unfinished work that has not been recovered, or when the
+workspace/app state itself is the requested deliverable; suspend it when
 appropriate. Never clean other workers or retained user data by age alone.
 Report the worker name and any remaining qualification gaps.
