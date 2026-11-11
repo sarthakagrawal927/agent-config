@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { createInterface } = require('node:readline');
+const { once } = require('node:events');
 const { test } = require('node:test');
 
 const entry = path.join(__dirname, '../skills/isolated-computer-use/scripts/cua-mcp');
@@ -24,9 +25,10 @@ for (const mode of [['mcp'], ['daemon', 'mcp']]) {
     t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
     const fake = path.join(dir, 'cua');
     fs.writeFileSync(fake, `#!/usr/bin/env python3
-import json,os,sys
+import json,os,sys,time
 for line in sys.stdin:
  m=json.loads(line)
+ if m.get('params',{}).get('arguments',{}).get('fixture_slow'):time.sleep(6)
  print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'structuredContent':{'id':'local:'+m['params']['arguments']['name']} if m.get('params',{}).get('name')=='create_space' else {},'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
 `);
     fs.chmodSync(fake, 0o755);
@@ -94,6 +96,15 @@ for line in sys.stdin:
     assert.equal(guest.result.received.params.arguments.space, 'local:' + name);
     await call('delete_space', { space: 'local:' + name });
     assert.ok((await call('call_tool', { space: 'local:' + name, tool: 'click' })).error);
-    child.stdin.end();
+    if (mode.length === 1) {
+      const created = (await call('create_space', create)).result.received.params.arguments.name;
+      const id = ++sequence;
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
+        params: { name: 'delete_space', arguments: { space: 'local:' + created, fixture_slow: true } } }) + '\n');
+      const exited = once(child, 'exit');
+      child.stdin.end();
+      assert.equal(JSON.parse((await lines.next()).value).id, id);
+      assert.equal((await exited)[0], 0);
+    } else child.stdin.end();
   });
 }
