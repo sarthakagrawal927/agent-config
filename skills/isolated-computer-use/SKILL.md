@@ -20,13 +20,17 @@ help when the installed version differs. Local workers require no Cua account.
 Use [scripts/cua-mcp](scripts/cua-mcp) as the MCP command with argument `mcp`.
 It requires Python 3 and the installed Cua CLI. Its guard refuses direct, relay,
 cloud, bare-name and host targets, clears inherited daemon/default targets, and
-runs an embedded producer. Only local Space creation, jobs, selected transfers,
+runs an embedded producer. Only local Space creation, jobs, staged transfers,
 guest tools and deletion are exposed. No pools, host adoption or sharing tools.
 This constrains this MCP connection, not an agent's other unrestricted tools.
 
 Read the live schemas. Create one worker with `create_space`: `on=local`,
 `image=macos`, `kind=vm`, `runtime=lume`, `reuse=false`, `count=1`, `wait=false`.
-Record its returned `local:<name>` and task owner. Use `list_spaces` to establish
+Set `FLEET_CUA_OWNER` to a stable unique agent/task name in the MCP configuration
+when reconnects are needed (Pace uses its own namespace). The guard records only
+workers it created for that owner and refuses other local workers. Without that
+setting, ownership lasts for this connection. Record its returned `local:<name>`
+and task owner. Use `list_spaces` to establish
 readiness. Address every subsequent call with that explicit `space` ID. Never
 adopt, operate or remove another task's worker. A Mac supports at most two macOS
 VMs; wait for capacity instead of evicting another worker or using the host.
@@ -42,8 +46,11 @@ their selected target and screenshot state are shared between agents. If GUI
 control is unavailable, report that gap rather than using the owner's desktop.
 
 Keep host home directories, browser profiles, personal app data and credentials
-out of workers. Transfer only the source, fixtures and artifacts needed for the
-authorized task. Do not migrate sign-ins, expose a host service, share a worker
+out of workers. Stage only the source and fixtures needed for the authorized task under
+`~/Library/Application Support/Pace/testing/inputs/<task>/`. The guard refuses
+other upload roots, including symlink escapes. Downloads must remain under
+`~/Library/Application Support/Pace/testing/results/`; the guard supplies a
+worker subfolder when no destination is provided. Do not migrate sign-ins, expose a host service, share a worker
 or publish a preview without the owner's request. Keep SIP and host permissions
 intact. Guest permissions are separate from host permissions.
 

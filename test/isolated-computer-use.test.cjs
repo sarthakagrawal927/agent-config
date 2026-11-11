@@ -27,11 +27,11 @@ for (const mode of [['mcp'], ['daemon', 'mcp']]) {
 import json,os,sys
 for line in sys.stdin:
  m=json.loads(line)
- print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
+ print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'structuredContent':{'id':'local:worker-1'} if m.get('params',{}).get('name')=='create_space' else {},'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
 `);
     fs.chmodSync(fake, 0o755);
     const child = spawn('/bin/sh', [entry, ...mode], {
-      env: { ...process.env, FLEET_CUA_EXECUTABLE: fake, CUA_MCP_PERMISSIONS: 'all',
+      env: { ...process.env, FLEET_CUA_EXECUTABLE: fake, HOME: dir, CUA_MCP_PERMISSIONS: 'all',
         CUA_SANDBOX: 'host', CUA_DAEMON: 'http://localhost:1', CUA_DAEMON_TOKEN: 'fixture',
         CUA_DEFAULT_ON: 'direct:unwanted-host' },
       stdio: ['pipe', 'pipe', 'inherit'],
@@ -55,6 +55,13 @@ for line in sys.stdin:
     for (const name of ['add_space', 'share_space', 'sandbox_pool_create', 'computer_click']) {
       assert.ok((await call(name, { space: 'local:worker' })).error);
     }
+    for (const params of [null, []]) {
+      const id = ++sequence;
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params }) + '\n');
+      const response = JSON.parse((await lines.next()).value);
+      assert.equal(response.id, id);
+      assert.match(response.error.message, /Malformed/);
+    }
     const create = { on: 'local', image: 'macos', kind: 'vm', runtime: 'lume', reuse: false, count: 1, wait: false };
     for (const overrides of [{ on: 'default' }, { on: 'host:owner' }, { reuse: true }, { count: 2 }, { volumes: ['/Users'] }]) {
       assert.ok((await call('create_space', { ...create, ...overrides })).error);
@@ -69,7 +76,18 @@ for line in sys.stdin:
     assert.equal(result.env.CUA_RUNTIME_LUME_VNC, 'disabled');
     assert.equal(result.env.CUA_POOL_AUTO, 'off');
     assert.ok(!result.env.CUA_MCP_PERMISSIONS.includes(':all'));
-    const guest = await call('call_tool', { space: 'local:worker-1', tool: 'get_ui_state', arguments: {} });
+    assert.ok((await call('delete_space', { space: 'local:other-worker' })).error);
+    assert.ok((await call('send_file', { space: 'local:worker-1', path: path.join(dir, '.ssh') })).error);
+    assert.ok((await call('download', { space: 'local:worker-1', path: '/tmp/x', dest: path.join(dir, 'Library/LaunchAgents') })).error);
+    const inputs = path.join(dir, 'Library/Application Support/Pace/testing/inputs');
+    fs.mkdirSync(inputs, { recursive: true });
+    fs.symlinkSync(dir, path.join(inputs, 'escape'));
+    assert.ok((await call('send_file', { space: 'local:worker-1', path: path.join(inputs, 'escape/.ssh') })).error);
+    const upload = await call('send_file', { space: 'local:worker-1', path: path.join(inputs, 'source.tar') });
+    assert.equal(upload.result.received.params.arguments.path, path.join(fs.realpathSync(inputs), 'source.tar'));
+    const download = await call('download', { space: 'local:worker-1', path: '/tmp/report.md' });
+    assert.ok(download.result.received.params.arguments.dest.endsWith('/Pace/testing/results/worker-1'));
+    const guest = await call('call_tool' , { space: 'local:worker-1', tool: 'get_ui_state', arguments: {} });
     assert.equal(guest.result.received.params.arguments.space, 'local:worker-1');
     child.stdin.end();
   });

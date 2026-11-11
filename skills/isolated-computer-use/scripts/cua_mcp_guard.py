@@ -10,11 +10,39 @@ import re
 import subprocess
 import sys
 import threading
+import tempfile
+import fcntl
+import uuid
 
 TOOLS = frozenset(("create_space", "list_spaces", "space_job", "space_bash",
                    "space_write", "send_file", "download", "list_tools",
                    "call_tool", "delete_space"))
 PERMISSIONS = ",".join("spaces:" + name for name in sorted(TOOLS))
+
+
+INPUTS = Path.home()/"Library/Application Support/Pace/testing/inputs"
+RESULTS = Path.home()/"Library/Application Support/Pace/testing/results"
+OWNER = os.environ.get("FLEET_CUA_OWNER", "connection-" + uuid.uuid4().hex)
+STATE = Path.home()/".local/share/isolated-computer-use"/(OWNER + ".json")
+
+
+def ownership(space=None):
+    """Per-owner persistent receipts permit reconnects without adopting arbitrary VMs."""
+    STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with STATE.with_suffix(".lock").open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        known = set(json.loads(STATE.read_text())) if STATE.exists() else set()
+        if space:
+            known.add(space)
+            fd, temporary = tempfile.mkstemp(dir=STATE.parent)
+            with os.fdopen(fd, "w") as handle:
+                json.dump(sorted(known), handle)
+            os.replace(temporary, STATE)
+        return known
+
+
+def within(path, root):
+    return isinstance(path, str) and Path(path).expanduser().resolve().is_relative_to(root.resolve())
 
 
 def rejection(message):
@@ -25,6 +53,8 @@ def rejection(message):
             return None
         return "Unsupported MCP method"
     params = message.get("params", {})
+    if not isinstance(params, dict):
+        return "Malformed MCP request params"
     name, args = params.get("name"), params.get("arguments", {})
     if name not in TOOLS or not isinstance(args, dict):
         return "Only the isolated testing tools are available"
@@ -35,17 +65,39 @@ def rejection(message):
                for key, value in required.items()):
             return "Create one fresh local macOS Lume VM with wait=false"
         # Do not accept host mounts, service addresses or future placement extensions.
-        allowed = set(required) | {"cpu", "memory", "labels"}
+        allowed = set(required) | {"labels"}
         if set(args) - allowed:
             return "Unsupported VM creation option"
     elif name != "list_spaces":
         if not isinstance(args.get("space"), str) or not re.fullmatch(
                 r"local:[A-Za-z0-9][A-Za-z0-9_.-]*", args["space"]):
             return "An explicit local:<worker> virtual Mac is required; host targets are refused"
+        if args["space"] not in ownership():
+            return "This connection owner did not create that worker"
+        if name == "send_file":
+            if not within(args.get("path"), INPUTS):
+                return "Stage selected source under " + str(INPUTS)
+            args["path"] = str(Path(args["path"]).expanduser().resolve())
+        if name == "download":
+            destination = args.get("dest", str(RESULTS / args["space"][6:]))
+            if not within(destination, RESULTS):
+                return "Artifacts must stay under " + str(RESULTS)
+            args["dest"] = str(Path(destination).expanduser().resolve())
     return None
 
 
+def unique_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON key")
+        result[key] = value
+    return result
+
+
 def main():
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", OWNER):
+        raise SystemExit("Invalid FLEET_CUA_OWNER")
     env = dict(os.environ)
     for key in ("CUA_SANDBOX", "CUA_DAEMON", "CUA_DAEMON_TOKEN"):
         env.pop(key, None)
@@ -56,6 +108,7 @@ def main():
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              text=True, bufsize=1, env=env)
     lock = threading.Lock()
+    pending = set()
 
     def emit(line):
         with lock:
@@ -64,6 +117,22 @@ def main():
 
     def output():
         for line in child.stdout:
+            response = json.loads(line)
+            if response.get("id") in pending:
+                pending.discard(response["id"])
+                result = response.get("result", {})
+                if not result.get("isError"):
+                    candidates = [result.get("structuredContent", {})]
+                    for block in result.get("content", []):
+                        if block.get("type") == "text":
+                            try:
+                                candidates.append(json.loads(block["text"]))
+                            except (ValueError, KeyError):
+                                pass
+                    for candidate in candidates:
+                        if isinstance(candidate, dict) and re.fullmatch(
+                                r"local:[A-Za-z0-9][A-Za-z0-9_.-]*", str(candidate.get("id", ""))):
+                            ownership(candidate["id"])
             emit(line)
         # End the connection when its producer disappears; no silent restart/replay.
         os._exit(child.wait())
@@ -72,7 +141,7 @@ def main():
     try:
         for line in sys.stdin:
             try:
-                message = json.loads(line)
+                message = json.loads(line, object_pairs_hook=unique_keys)
                 if not isinstance(message, dict):
                     raise ValueError("Expected an MCP object")
                 error = rejection(message)
@@ -83,7 +152,9 @@ def main():
                     emit(json.dumps({"jsonrpc": "2.0", "id": message["id"], "error": {
                         "code": -32602, "message": error}}) + "\n")
             else:
-                child.stdin.write(line)
+                if message.get("method") == "tools/call" and message["params"]["name"] == "create_space":
+                    pending.add(message.get("id"))
+                child.stdin.write(json.dumps(message) + "\n")
                 child.stdin.flush()
     finally:
         child.terminate()
