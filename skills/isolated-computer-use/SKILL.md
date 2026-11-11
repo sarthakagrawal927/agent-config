@@ -27,8 +27,9 @@ This constrains this MCP connection, not an agent's other unrestricted tools.
 Read the live schemas. Create one worker with `create_space`: `on=local`,
 `image=macos`, `kind=vm`, `runtime=lume`, `reuse=false`, `count=1`, `wait=false`.
 Set `FLEET_CUA_OWNER` to a stable unique agent/task name in the MCP configuration
-when reconnects are needed (Pace uses its own namespace). The guard records only
-workers it created for that owner and refuses other local workers. Without that
+when reconnects are needed (Pace uses its own namespace). The guard reserves a unique worker name for that owner before delivery and
+refuses other local workers. Uncertain provisioning attempts remain recorded
+for recovery; remove only confirmed task-owned workers. Without that
 setting, ownership lasts for this connection. Record its returned `local:<name>`
 and task owner. Use `list_spaces` to establish
 readiness. Address every subsequent call with that explicit `space` ID. Never

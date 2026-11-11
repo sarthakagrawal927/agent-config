@@ -13,6 +13,7 @@ import threading
 import tempfile
 import fcntl
 import uuid
+import time
 
 TOOLS = frozenset(("create_space", "list_spaces", "space_job", "space_bash",
                    "space_write", "send_file", "download", "list_tools",
@@ -57,6 +58,8 @@ def rejection(message):
                                      "notifications/initialized", "notifications/cancelled"):
             return None
         return "Unsupported MCP method"
+    if type(message.get("id")) not in (str, int):
+        return "MCP tool calls require a request id"
     params = message.get("params", {})
     if not isinstance(params, dict):
         return "Malformed MCP request params"
@@ -149,17 +152,19 @@ def main():
                                        and re.fullmatch(r"local:[A-Za-z0-9][A-Za-z0-9_.-]*", str(c.get("id", "")))]
                             if not created:
                                 raise ValueError("Creation returned no local worker id; inspect retained workers")
-                            for space in created:
-                                ownership(space)
+                            if set(created) != {space}:
+                                raise ValueError("Creation id did not match reserved worker " + str(space))
                 emit(line)
         except Exception as error:
             print("Cua MCP producer or ownership receipt failed: " + str(error), file=sys.stderr, flush=True)
             child.terminate()
             child.wait()
             os._exit(70)
-        os._exit(child.wait())
+        code = child.wait()
+        os._exit(code or (70 if pending else 0))
 
-    threading.Thread(target=output, daemon=True).start()
+    reader = threading.Thread(target=output, daemon=True)
+    reader.start()
     try:
         for line in sys.stdin:
             try:
@@ -175,11 +180,25 @@ def main():
                         "code": -32602, "message": error}}) + "\n")
             else:
                 if message.get("method") == "tools/call" and message["params"]["name"] in ("create_space", "delete_space"):
-                    pending[message.get("id")] = (message["params"]["name"], message["params"]["arguments"].get("space"))
+                    operation = message["params"]["name"]
+                    space = message["params"]["arguments"].get("space")
+                    if operation == "create_space":
+                        space = "local:" + message["params"]["arguments"]["name"]
+                        ownership(space)  # Reserve before delivery, including uncertain replies.
+                    pending[message["id"]] = (operation, space)
                 child.stdin.write(json.dumps(message) + "\n")
                 child.stdin.flush()
     finally:
+        deadline = time.monotonic() + 30
+        while pending and child.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        if pending:
+            print("MCP drain timed out; owned workers retained: " + repr(list(pending.values())), file=sys.stderr, flush=True)
+            child.terminate()
+            child.wait(timeout=5)
+            raise SystemExit(70)
         child.stdin.close()
+        reader.join(timeout=5)
         try:
             child.wait(timeout=5)
         except subprocess.TimeoutExpired:
