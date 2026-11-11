@@ -29,6 +29,7 @@ import json,os,sys,time
 for line in sys.stdin:
  m=json.loads(line)
  if m.get('params',{}).get('arguments',{}).get('fixture_slow'):time.sleep(6)
+ if m.get('params',{}).get('name')=='create_space':print(json.dumps({'jsonrpc':'2.0','id':m['id'],'method':'ping'}),flush=True)
  print(json.dumps({'jsonrpc':'2.0','id':m['id'],'result':{'structuredContent':{'id':'local:'+m['params']['arguments']['name']} if m.get('params',{}).get('name')=='create_space' else {},'received':m,'argv':sys.argv[1:],'env':{k:os.environ.get(k) for k in ['CUA_SANDBOX','CUA_DAEMON','CUA_DAEMON_TOKEN','CUA_MCP_PERMISSIONS','CUA_RUNTIME_LUME_VNC','CUA_DEFAULT_ON','CUA_POOL_AUTO']}}}),flush=True)
 `);
     fs.chmodSync(fake, 0o755);
@@ -45,9 +46,10 @@ for line in sys.stdin:
       const id = ++sequence;
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
         params: { name, arguments: args } }) + '\n');
-      const { value, done } = await lines.next();
-      assert.equal(done, false);
-      const response = JSON.parse(value);
+      let next = await lines.next();
+      while (!next.done && JSON.parse(next.value).method) next = await lines.next();
+      assert.equal(next.done, false);
+      const response = JSON.parse(next.value);
       assert.equal(response.id, id);
       return response;
     }
@@ -101,6 +103,9 @@ for line in sys.stdin:
       const id = ++sequence;
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
         params: { name: 'delete_space', arguments: { space: 'local:' + created, fixture_slow: true } } }) + '\n');
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call',
+        params: { name: 'list_spaces', arguments: {} } }) + '\n');
+      assert.match(JSON.parse((await lines.next()).value).error.message, /already pending/);
       const exited = once(child, 'exit');
       child.stdin.end();
       assert.equal(JSON.parse((await lines.next()).value).id, id);

@@ -133,7 +133,7 @@ def main():
             for line in child.stdout:
                 response = json.loads(line)
                 request_id = response.get("id")
-                operation = pending.pop(request_id, None)
+                operation = pending.pop(request_id, None) if "method" not in response else None
                 if operation:
                     name, space = operation
                     result = response.get("result", {})
@@ -165,7 +165,7 @@ def main():
                 child.wait()
             os._exit(70)
         code = child.wait()
-        os._exit(code or (70 if pending else 0))
+        os._exit(70 if pending or code < 0 else code)
 
     reader = threading.Thread(target=output, daemon=True)
     reader.start()
@@ -176,6 +176,8 @@ def main():
                 if not isinstance(message, dict):
                     raise ValueError("Expected an MCP object")
                 error = rejection(message)
+                if not error and message.get("method") == "tools/call" and message["id"] in pending:
+                    error = "A request with that id is already pending"
             except (ValueError, TypeError):
                 message, error = {}, "Malformed MCP request"
             if error:
@@ -202,7 +204,7 @@ def main():
         while pending and time.monotonic() < deadline:
             time.sleep(0.01)
         if pending:
-            print("MCP drain timed out; owned workers retained: " + repr(list(pending.values())), file=sys.stderr, flush=True)
+            print("MCP drain timed out; pending calls aborted, workers retained: " + repr(list(pending.values())), file=sys.stderr, flush=True)
             child.terminate()
             try:
                 child.wait(timeout=5)
