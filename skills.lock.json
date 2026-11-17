@@ -919,8 +919,6 @@
       "commit": "ec8c029b9a72f5ed36a683ffcedd046897418116",
       "path": "game-design",
       "targets": [
-        "agents",
-        "claude",
         "codex"
       ],
       "include": {
@@ -936,8 +934,6 @@
       "commit": "ec8c029b9a72f5ed36a683ffcedd046897418116",
       "path": "level-design",
       "targets": [
-        "agents",
-        "claude",
         "codex"
       ],
       "include": {
@@ -953,8 +949,6 @@
       "commit": "3cc93458c4949c39a04e938ea7892a1d6d3d40bf",
       "path": "agent-skills/game-development/design-action-combat",
       "targets": [
-        "agents",
-        "claude",
         "codex"
       ],
       "include": {
@@ -970,8 +964,6 @@
       "commit": "3cc93458c4949c39a04e938ea7892a1d6d3d40bf",
       "path": "agent-skills/game-development/tune-enemy-ai",
       "targets": [
-        "agents",
-        "claude",
         "codex"
       ],
       "include": {
@@ -987,8 +979,6 @@
       "commit": "3cc93458c4949c39a04e938ea7892a1d6d3d40bf",
       "path": "agent-skills/game-development/test-playable-web-games",
       "targets": [
-        "agents",
-        "claude",
         "codex"
       ],
       "include": {
