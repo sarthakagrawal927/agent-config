@@ -1,6 +1,6 @@
 --- a/SKILL.md
 +++ b/SKILL.md
-@@ -1,6 +1,6 @@
+@@ -1,12 +1,13 @@
  ---
  name: call-teammate
 -description: Delegate work to Codex, Grok, Cursor, a fresh Claude Code instance, Hermes, or optional Devin. Use for independent review, parallel attempts, bounded specialist work, and explicit-spend external agent runs.
@@ -8,7 +8,15 @@
  ---
  
  # call-teammate — parent skill
-@@ -15,15 +15,15 @@
+ 
+ Routes to the right teammate subskill based on which CLI the user wants to
+-delegate to. Subskills live as sibling directories under `skills/`.
++delegate to. Resolve the table’s `../call-*/SKILL.md` paths from
++`~/.local/share/agent-config/src/sass-maker__saas-maker/tooling/skills/call-teammate/`.
+ 
+ ## Routing table
+ 
+@@ -15,15 +16,15 @@
  | "delegate to codex" / "call codex" / "second opinion from a different model" / "mechanical refactor / test-fix loop" | `call-codex` | `../call-codex/SKILL.md` | OpenAI model family, scoped implementation, independent review |
  | "delegate to grok" / "call grok" / "N parallel attempts" / "cross-model second opinion" / "non-Anthropic/non-OpenAI opinion" | `call-grok` | `../call-grok/SKILL.md` | xAI model family, native worktree isolation, best-of-N attempts |
  | "delegate to cursor" / "call cursor" / implementation fallback when other teammates are quota-limited | `call-cursor` | `../call-cursor/SKILL.md` | Cursor Agent CLI, clean JSON envelope, read-only plan/ask modes, separate model roster and quota |
