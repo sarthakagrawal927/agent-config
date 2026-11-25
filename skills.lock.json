@@ -297,6 +297,7 @@
       "url": "https://github.com/sass-maker/saas-maker.git",
       "branch": "main",
       "path": "tooling/skills/call-teammate",
+      "patch": "patches/call-teammate-models.patch",
       "targets": [
         "fleet-agents",
         "openclaw",
